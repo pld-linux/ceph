@@ -1,0 +1,11 @@
+--- ./src/logrotate.conf.new	2012-01-11 18:23:10.597593501 -0500
++++ ./src/logrotate.conf	2012-01-11 18:23:26.808390838 -0500
+@@ -4,7 +4,7 @@
+     compress
+     sharedscripts
+     postrotate
+-        invoke-rc.d ceph reload >/dev/null || service ceph reload >/dev/null
++        service ceph reload >/dev/null 2>/dev/null || true
+     endscript
+     missingok
+ }

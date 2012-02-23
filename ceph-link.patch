@@ -1,0 +1,11 @@
+--- ceph-0.41/src/Makefile.am~	2012-01-27 21:35:39.000000000 +0100
++++ ceph-0.41/src/Makefile.am	2012-02-23 09:55:11.768753394 +0100
+@@ -116,7 +116,7 @@
+ bin_PROGRAMS += cephfs
+ 
+ librados_config_SOURCES = librados-config.cc
+-librados_config_LDADD = libglobal.la librados.la $(EXTRALIBS) $(CRYPTO_LIBS)
++librados_config_LDADD = $(LIBGLOBAL_LDA) librados.la $(EXTRALIBS) $(CRYPTO_LIBS)
+ bin_PROGRAMS += librados-config
+ 
+ # synthetic client
