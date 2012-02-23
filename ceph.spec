@@ -1,7 +1,7 @@
 Summary:	User space components of the Ceph file system
 Name:		ceph
 Version:	0.41
-Release:	0.1
+Release:	1
 License:	LGPLv2
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
@@ -158,8 +158,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %preun
 if [ "$1" = "0" ] ; then
-    %service ceph stop
-    /sbin/chkconfig --del ceph
+	%service ceph stop
+	/sbin/chkconfig --del ceph
 fi
 
 %post libs -p /sbin/ldconfig
