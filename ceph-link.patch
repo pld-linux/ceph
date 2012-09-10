@@ -18,6 +18,15 @@
  bin_PROGRAMS += librados-config
  
  # synthetic client
+@@ -268,7 +268,7 @@
+ libcephfs_la_CFLAGS= ${CRYPTO_CFLAGS} ${AM_CFLAGS}
+ libcephfs_la_CXXFLAGS= ${CRYPTO_CXXFLAGS} ${AM_CXXFLAGS}
+ libcephfs_la_LIBADD = libosdc.la
+-libcephfs_la_LDFLAGS =  $(PTHREAD_LIBS) $(CRYPTO_LIBS) $(EXTRALIBS) \
++libcephfs_la_LDFLAGS =  $(PTHREAD_LIBS) $(CRYPTO_LIBS) $(EXTRALIBS) -lboost_system \
+             ${AM_LDFLAGS} -version-info 1:0:0 -export-symbols-regex '^ceph_.*'
+ lib_LTLIBRARIES += libcephfs.la
+ 
 @@ -293,7 +293,7 @@
  librados_la_SOURCES = ${librados_SOURCES}
  librados_la_CFLAGS = ${CRYPTO_CFLAGS} ${AM_CFLAGS}
