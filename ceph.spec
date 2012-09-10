@@ -34,6 +34,7 @@ BuildRequires:	rpmbuild(macros) >= 1.228
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
+Obsoletes:	gcephtool
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %define		skip_post_check_so	libcls_.*.so.*
@@ -106,15 +107,6 @@ obsync is a tool to synchronize objects between cloud object storage
 providers, such as Amazon S3 (or compatible services), a Ceph RADOS
 cluster, or a local directory.
 
-%package gcephtool
-Summary:	Ceph graphical monitoring tool
-License:	LGPLv2
-Group:		Base
-
-%description gcephtool
-gcephtool is a graphical monitor for the clusters running the Ceph
-distributed file system.
-
 %prep
 %setup -q
 %patch0 -p1
@@ -172,6 +164,7 @@ fi
 %attr(755,root,root) %{_bindir}/cephfs
 %attr(755,root,root) %{_bindir}/ceph-conf
 %attr(755,root,root) %{_bindir}/ceph-clsinfo
+%attr(755,root,root) %{_bindir}/ceph-dencoder
 %attr(755,root,root) %{_bindir}/crushtool
 %attr(755,root,root) %{_bindir}/monmaptool
 %attr(755,root,root) %{_bindir}/osdmaptool
@@ -188,8 +181,11 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-debugpack
 %attr(755,root,root) %{_bindir}/ceph-coverage
 %dir %{_libdir}/rados-classes
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_lock.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rbd.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
+%attr(755,root,root) /sbin/ceph-disk-activate
+%attr(755,root,root) /sbin/ceph-disk-prepare
 %attr(755,root,root) /sbin/mkcephfs
 %attr(755,root,root) /sbin/mount.ceph
 %dir %{_libdir}/ceph
@@ -203,9 +199,11 @@ fi
 %{_mandir}/man8/ceph-clsinfo.8*
 %{_mandir}/man8/ceph-conf.8*
 %{_mandir}/man8/ceph-debugpack.8*
+%{_mandir}/man8/ceph-dencoder.8*
 %{_mandir}/man8/ceph-mds.8*
 %{_mandir}/man8/ceph-mon.8*
 %{_mandir}/man8/ceph-osd.8*
+%{_mandir}/man8/ceph-rbdnamer.8*
 %{_mandir}/man8/ceph-run.8*
 %{_mandir}/man8/ceph-syn.8*
 %{_mandir}/man8/cephfs.8*
@@ -219,6 +217,7 @@ fi
 %{_mandir}/man8/radosgw.8*
 %{_mandir}/man8/radosgw-admin.8*
 %{_mandir}/man8/rbd.8*
+
 %dir %{_localstatedir}/lib/ceph
 %dir %{_localstatedir}/lib/ceph/tmp
 %dir %{_localstatedir}/log/ceph
@@ -231,13 +230,10 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librados.so.2
 %attr(755,root,root) %{_libdir}/librbd.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librbd.so.1
-%attr(755,root,root) %{_libdir}/librgw.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/librgw.so.1
 
 %files -n python-ceph
 %defattr(644,root,root,755)
 %{py_sitescriptdir}/rados.py*
-%{py_sitescriptdir}/rgw.py*
 %{py_sitescriptdir}/rbd.py*
 
 %files fuse
@@ -249,29 +245,20 @@ fi
 %files devel
 %defattr(644,root,root,755)
 %{_includedir}/cephfs
-%{_includedir}/crush
 %{_includedir}/rados
 %{_includedir}/rbd
 %attr(755,root,root) %{_libdir}/libcephfs.so
 %attr(755,root,root) %{_libdir}/librados.so
-%attr(755,root,root) %{_libdir}/librgw.so
 %attr(755,root,root) %{_libdir}/librbd.so
 %{_libdir}/libcephfs.la
 %{_libdir}/librados.la
-%{_libdir}/librgw.la
 %{_libdir}/librbd.la
 
 %files static
 %defattr(644,root,root,755)
 %{_libdir}/libcephfs.a
 %{_libdir}/librados.a
-%{_libdir}/librgw.a
 %{_libdir}/librbd.a
-
-%files gcephtool
-%defattr(644,root,root,755)
-%attr(755,root,root) %{_bindir}/gceph
-%{_datadir}/ceph_tool
 
 %files radosgw
 %defattr(644,root,root,755)
@@ -283,3 +270,4 @@ fi
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_bindir}/obsync
 %attr(755,root,root) %{_bindir}/boto_tool
+%{_mandir}/man1/obsync.1*
