@@ -1,15 +1,14 @@
 Summary:	User space components of the Ceph file system
 Name:		ceph
-Version:	0.41
+Version:	0.51
 Release:	1
 License:	LGPLv2
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	12730a25f7c82549a08b0d8b8c09d69f
+# Source0-md5:	e4d07eccd79c9a4a9eeee4066f2a13a3
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
-Patch2:		%{name}-compile-fixes.patch
-Patch3:		%{name}-link.patch
+Patch2:		%{name}-link.patch
 URL:		http://ceph.newdream.net/
 BuildRequires:	boost-devel
 BuildRequires:	cryptopp-devel
@@ -121,7 +120,6 @@ distributed file system.
 %patch0 -p1
 %patch1 -p0
 %patch2 -p1
-%patch3 -p1
 
 %build
 %{__libtoolize}

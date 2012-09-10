@@ -1,11 +1,29 @@
---- ceph-0.41/src/Makefile.am~	2012-01-27 21:35:39.000000000 +0100
-+++ ceph-0.41/src/Makefile.am	2012-02-23 09:55:11.768753394 +0100
-@@ -116,7 +116,7 @@
+--- ceph-0.51/src/Makefile.am.orig	2012-08-26 00:58:03.000000000 +0200
++++ ceph-0.51/src/Makefile.am	2012-09-10 18:52:40.813987974 +0200
+@@ -53,7 +53,7 @@
+ EXTRALIBS += -lprofiler
+ endif
+ 
+-LIBGLOBAL_LDA = libglobal.la $(PTHREAD_LIBS) -lm $(CRYPTO_LIBS) $(EXTRALIBS)
++LIBGLOBAL_LDA = libglobal.la $(PTHREAD_LIBS) -lm $(CRYPTO_LIBS) $(EXTRALIBS) -lboost_system
+ 
+ LIBOS_LDA = libos.a
+ 
+@@ -137,7 +137,7 @@
  bin_PROGRAMS += cephfs
  
  librados_config_SOURCES = librados-config.cc
 -librados_config_LDADD = libglobal.la librados.la $(EXTRALIBS) $(CRYPTO_LIBS)
-+librados_config_LDADD = $(LIBGLOBAL_LDA) librados.la $(EXTRALIBS) $(CRYPTO_LIBS)
++librados_config_LDADD = librados.la $(LIBGLOBAL_LDA) $(EXTRALIBS) $(CRYPTO_LIBS)
  bin_PROGRAMS += librados-config
  
  # synthetic client
+@@ -293,7 +293,7 @@
+ librados_la_SOURCES = ${librados_SOURCES}
+ librados_la_CFLAGS = ${CRYPTO_CFLAGS} ${AM_CFLAGS}
+ librados_la_CXXFLAGS = ${CRYPTO_CXXFLAGS} ${AM_CXXFLAGS}
+-librados_la_LIBADD = libcommon.la $(PTHREAD_LIBS) $(CRYPTO_LIBS) $(EXTRALIBS)
++librados_la_LIBADD = libcommon.la $(PTHREAD_LIBS) $(CRYPTO_LIBS) $(EXTRALIBS) -lboost_system
+ librados_la_LDFLAGS = ${AM_LDFLAGS} -version-info 2:0:0 -export-symbols-regex '^rados_.*'
+ lib_LTLIBRARIES += librados.la
+ 
