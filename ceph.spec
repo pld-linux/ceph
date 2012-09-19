@@ -1,7 +1,7 @@
 Summary:	User space components of the Ceph file system
 Name:		ceph
 Version:	0.51
-Release:	1
+Release:	2
 License:	LGPLv2
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
