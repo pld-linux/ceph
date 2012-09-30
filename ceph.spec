@@ -1,8 +1,9 @@
 Summary:	User space components of the Ceph file system
+Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	0.51
 Release:	2
-License:	LGPLv2
+License:	LGPL v2
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
 # Source0-md5:	e4d07eccd79c9a4a9eeee4066f2a13a3
@@ -28,7 +29,7 @@ BuildRequires:	libstdc++-devel
 BuildRequires:	libtcmalloc-devel
 BuildRequires:	libtool
 BuildRequires:	libuuid-devel
-BuildRequires:	perl
+BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 BuildRequires:	rpmbuild(macros) >= 1.228
 Requires(post,preun):	/sbin/chkconfig
@@ -43,32 +44,24 @@ BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 Ceph is a distributed network file system designed to provide
 excellent performance, reliability, and scalability.
 
+%description -l pl.UTF-8
+Ceph to rozproszony sieciowy system plików zaprojektowany z myślą o
+dobrej wydajności, wiarygodności i skalowalności.
+
 %package libs
 Summary:	Ceph shared libraries
+Summary(pl.UTF-8):	Biblioteki współdzielone Cepha
 Group:		Libraries
 
 %description libs
 Ceph shared libraries.
 
-%package -n python-ceph
-Summary:	Ceph python bindings
-Group:		Development/Languages/Python
-Requires:	%{name}-libs = %{version}-%{release}
-
-%description -n python-ceph
-Ceph python bindings.
-
-%package fuse
-Summary:	Ceph fuse-based client
-Group:		Base
-Requires:	%{name} = %{version}-%{release}
-
-%description fuse
-FUSE based client for Ceph distributed network file system
+%description libs -l pl.UTF-8
+Biblioteki współdzielone Cepha.
 
 %package devel
-Summary:	Ceph headers
-License:	LGPLv2
+Summary:	Ceph header files
+Summary(pl.UTF-8):	Pliki nagłówkowe bibliotek Cepha
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
 
@@ -76,8 +69,13 @@ Requires:	%{name}-libs = %{version}-%{release}
 This package contains the headers needed to develop programs that use
 Ceph.
 
+%description devel -l pl.UTF-8
+Ten pakiet zawiera pliki nagłówkowe potrzebne do tworzenia programów
+wykorzystujących Cepha.
+
 %package static
 Summary:	Ceph static libraries
+Summary(pl.UTF-8):	Biblioteki statyczne Cepha
 License:	LGPLv2
 Group:		Development/Libraries
 Requires:	%{name}-devel = %{version}-%{release}
@@ -85,9 +83,37 @@ Requires:	%{name}-devel = %{version}-%{release}
 %description static
 This package contains static Ceph libraries.
 
+%description static -l pl.UTF-8
+Ten pakiet zawiera biblioteki statyczne Cepha.
+
+%package -n python-ceph
+Summary:	Ceph Python bindings
+Summary(pl.UTF-8):	Wiązania Pythona do bibliotek Cepha
+Group:		Development/Languages/Python
+Requires:	%{name}-libs = %{version}-%{release}
+
+%description -n python-ceph
+Ceph Python bindings.
+
+%description -n python-ceph -l pl.UTF-8
+Wiązania Pythona do bibliotek Cepha.
+
+%package fuse
+Summary:	Ceph FUSE-based client
+Summary(pl.UTF-8):	Klient Cepha oparty na FUSE
+Group:		Base
+Requires:	%{name} = %{version}-%{release}
+
+%description fuse
+FUSE based client for Ceph distributed network file system.
+
+%description fuse -l pl.UTF-8
+Oparty na FUSE klient rozproszonego sieciowego systemu plików Ceph.
+
 %package radosgw
 Summary:	rados REST gateway
-Group:		Development/Libraries
+Summary(pl.UTF-8):	Bramka REST-owa rados
+Group:		Applications/System
 #Requires:	apache-mod_fcgid
 
 %description radosgw
@@ -95,9 +121,14 @@ radosgw is an S3 HTTP REST gateway for the RADOS object store. It is
 implemented as a FastCGI module using libfcgi, and can be used in
 conjunction with any FastCGI capable web server.
 
+%description radosgw -l pl.UTF-8
+radosgw to REST-owa bramka HTTP S3 do przechowalni obiektów RADOS.
+Jest zaimplementowana jako moduł FastCGI wykorzystujący libfcgi i może
+być używana w połączeniu z dowolnym serwerem WWW obsługującym FastCGI.
+
 %package obsync
-Summary:	synchronize data between cloud object storage providers or a local directory
-License:	LGPLv2
+Summary:	Synchronize data between cloud object storage providers or a local directory
+Summary(pl.UTF-8):	Synchronizacja danych między obiektami przechowywanymi w chmurze i katalogami lokalnymi
 Group:		Applications/Networking
 Requires:	python
 Requires:	python-boto
@@ -106,6 +137,11 @@ Requires:	python-boto
 obsync is a tool to synchronize objects between cloud object storage
 providers, such as Amazon S3 (or compatible services), a Ceph RADOS
 cluster, or a local directory.
+
+%description obsync -l pl.UTF-8
+obsync to narzędzie do synchronizacji obiektów między systemami
+przechowującymi obiekty w chmurze, takimi jak Amazon S3 (lub serwisy
+kompatybilne) a klastrem Ceph RADOS lub katalogiem lokalnym.
 
 %prep
 %setup -q
@@ -152,8 +188,8 @@ if [ "$1" = "0" ] ; then
 	/sbin/chkconfig --del ceph
 fi
 
-%post libs -p /sbin/ldconfig
-%postun libs -p /sbin/ldconfig
+%post	libs -p /sbin/ldconfig
+%postun	libs -p /sbin/ldconfig
 
 %files
 %defattr(644,root,root,755)
@@ -231,6 +267,24 @@ fi
 %attr(755,root,root) %{_libdir}/librbd.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librbd.so.1
 
+%files devel
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libcephfs.so
+%attr(755,root,root) %{_libdir}/librados.so
+%attr(755,root,root) %{_libdir}/librbd.so
+%{_libdir}/libcephfs.la
+%{_libdir}/librados.la
+%{_libdir}/librbd.la
+%{_includedir}/cephfs
+%{_includedir}/rados
+%{_includedir}/rbd
+
+%files static
+%defattr(644,root,root,755)
+%{_libdir}/libcephfs.a
+%{_libdir}/librados.a
+%{_libdir}/librbd.a
+
 %files -n python-ceph
 %defattr(644,root,root,755)
 %{py_sitescriptdir}/rados.py*
@@ -241,24 +295,6 @@ fi
 %doc COPYING
 %attr(755,root,root) %{_bindir}/ceph-fuse
 %{_mandir}/man8/ceph-fuse.8*
-
-%files devel
-%defattr(644,root,root,755)
-%{_includedir}/cephfs
-%{_includedir}/rados
-%{_includedir}/rbd
-%attr(755,root,root) %{_libdir}/libcephfs.so
-%attr(755,root,root) %{_libdir}/librados.so
-%attr(755,root,root) %{_libdir}/librbd.so
-%{_libdir}/libcephfs.la
-%{_libdir}/librados.la
-%{_libdir}/librbd.la
-
-%files static
-%defattr(644,root,root,755)
-%{_libdir}/libcephfs.a
-%{_libdir}/librados.a
-%{_libdir}/librbd.a
 
 %files radosgw
 %defattr(644,root,root,755)
