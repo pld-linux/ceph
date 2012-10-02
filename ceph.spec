@@ -1,37 +1,44 @@
+#
+# Conditional build:
+%bcond_with	hadoop	# Hadoop client (requires JNI)
+#
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.51
-Release:	2
+Version:	0.52
+Release:	1
 License:	LGPL v2
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	e4d07eccd79c9a4a9eeee4066f2a13a3
+# Source0-md5:	b3b9c8e7160d69cdf735628342a8dee0
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
 URL:		http://ceph.newdream.net/
-BuildRequires:	boost-devel
+BuildRequires:	autoconf >= 2.59
+BuildRequires:	automake
+BuildRequires:	boost-devel >= 1.34
 BuildRequires:	cryptopp-devel
 BuildRequires:	curl-devel
-BuildRequires:	expat-devel
+BuildRequires:	expat-devel >= 1.95
 BuildRequires:	fcgi-devel
 BuildRequires:	gdbm-devel
-BuildRequires:	google-perftools-devel
-BuildRequires:	gtk+2-devel
-BuildRequires:	gtkmm-devel
+%{?with_hadoop:BuildRequires:	jdk}
 BuildRequires:	keyutils-devel
+BuildRequires:	libaio-devel
 BuildRequires:	libatomic_ops
-BuildRequires:	libedit-devel
+BuildRequires:	libedit-devel >= 2.11
 BuildRequires:	libfuse-devel
 BuildRequires:	libltdl-devel
 BuildRequires:	libstdc++-devel
 BuildRequires:	libtcmalloc-devel
-BuildRequires:	libtool
+BuildRequires:	libtool >= 2:1.5
 BuildRequires:	libuuid-devel
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
+BuildRequires:	python >= 1:2.4
 BuildRequires:	rpmbuild(macros) >= 1.228
+BuildRequires:	sed >= 4.0
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
@@ -149,6 +156,8 @@ kompatybilne) a klastrem Ceph RADOS lub katalogiem lokalnym.
 %patch1 -p0
 %patch2 -p1
 
+%{__sed} -i -e '1s,/usr/bin/env python,/usr/bin/python,' src/obsync/obsync
+
 %build
 %{__libtoolize}
 %{__aclocal}
@@ -157,11 +166,15 @@ kompatybilne) a klastrem Ceph RADOS lub katalogiem lokalnym.
 %{__automake}
 %configure \
 	--sbindir=/sbin \
-	--without-hadoop \
+	--with-cryptopp \
+	--with-hadoop%{!?with_hadoop:=no} \
 	--with-radosgw \
-	--with-gtk2
+	--disable-silent-rules
+# --with-ocf ?
+# --with-system-leveldb (BR: libleveldb, snappy-devel)
+# --with-system-libs3 (BR: libs3)
 
-%{__make} V=1
+%{__make}
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -174,6 +187,7 @@ install -p src/init-ceph $RPM_BUILD_ROOT/etc/rc.d/init.d/ceph
 install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/rados-classes/*.{a,la}
+%py_postclean
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -287,8 +301,8 @@ fi
 
 %files -n python-ceph
 %defattr(644,root,root,755)
-%{py_sitescriptdir}/rados.py*
-%{py_sitescriptdir}/rbd.py*
+%{py_sitescriptdir}/rados.py[co]
+%{py_sitescriptdir}/rbd.py[co]
 
 %files fuse
 %defattr(644,root,root,755)
