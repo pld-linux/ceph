@@ -7,7 +7,7 @@ Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plik
 Name:		ceph
 Version:	0.52
 Release:	1
-License:	LGPL v2
+License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
 # Source0-md5:	b3b9c8e7160d69cdf735628342a8dee0
@@ -207,7 +207,8 @@ fi
 
 %files
 %defattr(644,root,root,755)
-%doc README src/sample.ceph.conf src/sample.fetch_config
+# COPYING specifies licenses of individual parts
+%doc AUTHORS COPYING README src/sample.ceph.conf src/sample.fetch_config
 %attr(754,root,root) /etc/rc.d/init.d/ceph
 %dir %{_sysconfdir}/ceph
 %attr(755,root,root) %{_bindir}/ceph
@@ -306,7 +307,6 @@ fi
 
 %files fuse
 %defattr(644,root,root,755)
-%doc COPYING
 %attr(755,root,root) %{_bindir}/ceph-fuse
 %{_mandir}/man8/ceph-fuse.8*
 
