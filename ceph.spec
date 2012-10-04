@@ -150,6 +150,19 @@ obsync to narzędzie do synchronizacji obiektów między systemami
 przechowującymi obiekty w chmurze, takimi jak Amazon S3 (lub serwisy
 kompatybilne) a klastrem Ceph RADOS lub katalogiem lokalnym.
 
+%package ocf
+Summary:	OCF Resource Agents for Ceph processes
+Summary(pl.UTF-8):	Agenci OCF do monitorowania procesów Cepha
+Group:		Applications/System
+Requires:	%{name} = %{version}-%{release}
+Requires:	resource-agents
+
+%description ocf
+OCF Resource Agents for Ceph processes.
+
+%description ocf -l pl.UTF-8
+Agenci OCF do monitorowania procesów Cepha.
+
 %prep
 %setup -q
 %patch0 -p1
@@ -168,9 +181,9 @@ kompatybilne) a klastrem Ceph RADOS lub katalogiem lokalnym.
 	--sbindir=/sbin \
 	--with-cryptopp \
 	--with-hadoop%{!?with_hadoop:=no} \
+	--with-ocf \
 	--with-radosgw \
 	--disable-silent-rules
-# --with-ocf ?
 # --with-system-leveldb (BR: libleveldb, snappy-devel)
 # --with-system-libs3 (BR: libs3)
 
@@ -321,3 +334,12 @@ fi
 %attr(755,root,root) %{_bindir}/obsync
 %attr(755,root,root) %{_bindir}/boto_tool
 %{_mandir}/man1/obsync.1*
+
+%files ocf
+%defattr(644,root,root,755)
+%dir %{_prefix}/lib/ocf/resource.d/ceph
+%attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/ceph
+%attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/mds
+%attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/mon
+%attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/osd
+%attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/rbd
