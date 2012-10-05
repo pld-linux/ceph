@@ -153,18 +153,31 @@ obsync to narzędzie do synchronizacji obiektów między systemami
 przechowującymi obiekty w chmurze, takimi jak Amazon S3 (lub serwisy
 kompatybilne) a klastrem Ceph RADOS lub katalogiem lokalnym.
 
-%package ocf
+%package resource-agents
 Summary:	OCF Resource Agents for Ceph processes
 Summary(pl.UTF-8):	Agenci OCF do monitorowania procesów Cepha
 Group:		Applications/System
 Requires:	%{name} = %{version}-%{release}
 Requires:	resource-agents
 
-%description ocf
+%description resource-agents
 OCF Resource Agents for Ceph processes.
 
-%description ocf -l pl.UTF-8
+%description resource-agents -l pl.UTF-8
 Agenci OCF do monitorowania procesów Cepha.
+
+%package -n hadoop-cephfs
+Summary:	Hadoop client for Ceph filesystem
+Summary(pl.UTF-8):	Klient Hadoopa dla systemu plików Ceph
+Group:		Libraries
+Requires:	%{name} = %{version}-%{release}
+Requires:	hadoop
+
+%description -n hadoop-cephfs
+Hadoop client for Ceph filesystem.
+
+%description -n hadoop-cephfs -l pl.UTF-8
+Klient Hadoopa dla systemu plików Ceph.
 
 %prep
 %setup -q
@@ -180,6 +193,7 @@ Agenci OCF do monitorowania procesów Cepha.
 %{__autoconf}
 %{__autoheader}
 %{__automake}
+%{?with_hadoop:CPPFLAGS="%{rpmcppflags} -I%{_jvmdir}/java/include -I%{_jvmdir}/java/include/linux"}
 %configure \
 	--sbindir=/sbin \
 	--with-cryptopp \
@@ -202,6 +216,10 @@ install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/tmp,log/ceph/stat} \
 install -p src/init-ceph $RPM_BUILD_ROOT/etc/rc.d/init.d/ceph
 install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 
+%if %{with hadoop}
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/libhadoopcephfs.{la,a}
+%endif
+
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/rados-classes/*.{a,la}
 %py_postclean
 
@@ -220,6 +238,9 @@ fi
 
 %post	libs -p /sbin/ldconfig
 %postun	libs -p /sbin/ldconfig
+
+%post	-n hadoop-cephfs -p /sbin/ldconfig
+%postun	-n hadoop-cephfs -p /sbin/ldconfig
 
 %files
 %defattr(644,root,root,755)
@@ -338,7 +359,7 @@ fi
 %attr(755,root,root) %{_bindir}/boto_tool
 %{_mandir}/man1/obsync.1*
 
-%files ocf
+%files resource-agents
 %defattr(644,root,root,755)
 %dir %{_prefix}/lib/ocf/resource.d/ceph
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/ceph
@@ -346,3 +367,11 @@ fi
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/mon
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/osd
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/rbd
+
+%if %{with hadoop}
+%files -n hadoop-cephfs
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libhadoopcephfs.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libhadoopcephfs.so.1
+%attr(755,root,root) %{_libdir}/libhadoopcephfs.so
+%endif
