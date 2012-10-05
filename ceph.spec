@@ -25,11 +25,13 @@ BuildRequires:	fcgi-devel
 BuildRequires:	gdbm-devel
 %{?with_hadoop:BuildRequires:	jdk}
 BuildRequires:	keyutils-devel
+BuildRequires:	leveldb-devel
 BuildRequires:	libaio-devel
 BuildRequires:	libatomic_ops
 BuildRequires:	libedit-devel >= 2.11
 BuildRequires:	libfuse-devel
 BuildRequires:	libltdl-devel
+BuildRequires:	libs3-devel
 BuildRequires:	libstdc++-devel
 BuildRequires:	libtcmalloc-devel
 BuildRequires:	libtool >= 2:1.5
@@ -39,6 +41,7 @@ BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
 BuildRequires:	rpmbuild(macros) >= 1.228
 BuildRequires:	sed >= 4.0
+BuildRequires:	snappy-devel
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
@@ -183,9 +186,9 @@ Agenci OCF do monitorowania procesów Cepha.
 	--with-hadoop%{!?with_hadoop:=no} \
 	--with-ocf \
 	--with-radosgw \
+	--with-system-leveldb \
+	--with-system-libs3 \
 	--disable-silent-rules
-# --with-system-leveldb (BR: libleveldb, snappy-devel)
-# --with-system-libs3 (BR: libs3)
 
 %{__make}
 
