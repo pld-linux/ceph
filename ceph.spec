@@ -5,12 +5,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.52
+Version:	0.53
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	b3b9c8e7160d69cdf735628342a8dee0
+# Source0-md5:	504f4f9ba6f84178478b08da7bc9eb39
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
@@ -40,7 +40,6 @@ BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
 BuildRequires:	rpmbuild(macros) >= 1.228
-BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
@@ -136,23 +135,6 @@ radosgw to REST-owa bramka HTTP S3 do przechowalni obiektów RADOS.
 Jest zaimplementowana jako moduł FastCGI wykorzystujący libfcgi i może
 być używana w połączeniu z dowolnym serwerem WWW obsługującym FastCGI.
 
-%package obsync
-Summary:	Synchronize data between cloud object storage providers or a local directory
-Summary(pl.UTF-8):	Synchronizacja danych między obiektami przechowywanymi w chmurze i katalogami lokalnymi
-Group:		Applications/Networking
-Requires:	python
-Requires:	python-boto
-
-%description obsync
-obsync is a tool to synchronize objects between cloud object storage
-providers, such as Amazon S3 (or compatible services), a Ceph RADOS
-cluster, or a local directory.
-
-%description obsync -l pl.UTF-8
-obsync to narzędzie do synchronizacji obiektów między systemami
-przechowującymi obiekty w chmurze, takimi jak Amazon S3 (lub serwisy
-kompatybilne) a klastrem Ceph RADOS lub katalogiem lokalnym.
-
 %package resource-agents
 Summary:	OCF Resource Agents for Ceph processes
 Summary(pl.UTF-8):	Agenci OCF do monitorowania procesów Cepha
@@ -185,8 +167,6 @@ Klient Hadoopa dla systemu plików Ceph.
 %patch1 -p0
 %patch2 -p1
 
-%{__sed} -i -e '1s,/usr/bin/env python,/usr/bin/python,' src/obsync/obsync
-
 %build
 %{__libtoolize}
 %{__aclocal}
@@ -216,11 +196,14 @@ install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/tmp,log/ceph/stat} \
 install -p src/init-ceph $RPM_BUILD_ROOT/etc/rc.d/init.d/ceph
 install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 
+# loadable modules
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/rados-classes/*.{a,la}
 %if %{with hadoop}
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/libhadoopcephfs.{la,a}
 %endif
+# packaged as %doc
+%{__rm} $RPM_BUILD_ROOT%{_docdir}/ceph/sample.{ceph.conf,fetch_config}
 
-%{__rm} $RPM_BUILD_ROOT%{_libdir}/rados-classes/*.{a,la}
 %py_postclean
 
 %clean
@@ -269,9 +252,12 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-debugpack
 %attr(755,root,root) %{_bindir}/ceph-coverage
 %dir %{_libdir}/rados-classes
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_lock.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rbd.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_refcount.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
+%attr(755,root,root) /sbin/ceph-create-keys
 %attr(755,root,root) /sbin/ceph-disk-activate
 %attr(755,root,root) /sbin/ceph-disk-prepare
 %attr(755,root,root) /sbin/mkcephfs
@@ -352,12 +338,6 @@ fi
 %attr(755,root,root) %{_bindir}/radosgw
 %attr(755,root,root) %{_bindir}/radosgw-admin
 %{_sysconfdir}/bash_completion.d/radosgw-admin
-
-%files obsync
-%defattr(644,root,root,755)
-%attr(755,root,root) %{_bindir}/obsync
-%attr(755,root,root) %{_bindir}/boto_tool
-%{_mandir}/man1/obsync.1*
 
 %files resource-agents
 %defattr(644,root,root,755)
