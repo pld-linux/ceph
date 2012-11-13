@@ -71,8 +71,14 @@ Biblioteki współdzielone Cepha.
 %package devel
 Summary:	Ceph header files
 Summary(pl.UTF-8):	Pliki nagłówkowe bibliotek Cepha
+License:	LGPL v2.1
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
+Requires:	boost-devel >= 1.34
+Requires:	cryptopp-devel
+Requires:	leveldb-devel
+Requires:	libatomic_ops
+Requires:	libuuid-devel
 
 %description devel
 This package contains the headers needed to develop programs that use
@@ -85,7 +91,7 @@ wykorzystujących Cepha.
 %package static
 Summary:	Ceph static libraries
 Summary(pl.UTF-8):	Biblioteki statyczne Cepha
-License:	LGPLv2
+License:	LGPL v2.1
 Group:		Development/Libraries
 Requires:	%{name}-devel = %{version}-%{release}
 
