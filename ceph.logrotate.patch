@@ -1,14 +1,16 @@
---- ceph-0.54/src/logrotate.conf.orig	2012-11-15 21:05:38.519614603 +0100
-+++ ceph-0.54/src/logrotate.conf	2012-11-15 21:09:14.862943424 +0100
-@@ -4,21 +4,7 @@
+--- ceph-0.55.1/src/logrotate.conf.orig	2012-12-15 15:11:13.516032449 +0100
++++ ceph-0.55.1/src/logrotate.conf	2012-12-15 15:16:52.636025383 +0100
+@@ -4,23 +4,7 @@
      compress
      sharedscripts
      postrotate
--        if [ -x `which invoke-rc.d` ]; then
+-        if which invoke-rc.d && [ -x `which invoke-rc.d` ]; then
 -            invoke-rc.d ceph reload >/dev/null
--        elif [ -x `which service` ]; then
+-        elif which service && [ -x `which service` ]; then
 -            service ceph reload >/dev/null
--        elif [ -x `which initctl` ]; then
+-        fi
+-        # Possibly reload twice, but depending on ceph.conf the reload above may be a no-op
+-        if which initctl && [ -x `which initctl` ]; then
 -            # upstart reload isn't very helpful here:
 -            #   https://bugs.launchpad.net/upstart/+bug/1012938
 -            for type in mon osd mds; do
@@ -19,7 +21,7 @@
 -		done
 -            done
 -        fi
-+            service ceph reload >/dev/null 2>/dev/null
++        service ceph reload >/dev/null 2>/dev/null
      endscript
      missingok
  }
