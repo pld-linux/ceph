@@ -1,16 +1,16 @@
---- ceph-0.55.1/src/logrotate.conf.orig	2012-12-15 15:11:13.516032449 +0100
-+++ ceph-0.55.1/src/logrotate.conf	2012-12-15 15:16:52.636025383 +0100
+--- ceph-0.56/src/logrotate.conf.orig	2013-01-06 13:46:50.321379068 +0100
++++ ceph-0.56/src/logrotate.conf	2013-01-06 14:46:15.021304770 +0100
 @@ -4,23 +4,7 @@
      compress
      sharedscripts
      postrotate
--        if which invoke-rc.d && [ -x `which invoke-rc.d` ]; then
+-        if which invoke-rc.d > /dev/null && [ -x `which invoke-rc.d` ]; then
 -            invoke-rc.d ceph reload >/dev/null
--        elif which service && [ -x `which service` ]; then
+-        elif which service > /dev/null && [ -x `which service` ]; then
 -            service ceph reload >/dev/null
 -        fi
 -        # Possibly reload twice, but depending on ceph.conf the reload above may be a no-op
--        if which initctl && [ -x `which initctl` ]; then
+-        if which initctl > /dev/null && [ -x `which initctl` ]; then
 -            # upstart reload isn't very helpful here:
 -            #   https://bugs.launchpad.net/upstart/+bug/1012938
 -            for type in mon osd mds; do

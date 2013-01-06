@@ -1,16 +1,17 @@
 #
 # Conditional build:
 %bcond_with	hadoop	# Hadoop client (requires JNI)
+%bcond_without	java	# Java binding
 #
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.55.1
+Version:	0.56
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	8276e98f2cffe6deabe729716fe930f6
+# Source0-md5:	4ff88372cf85a04ce40585724b192b53
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
@@ -23,7 +24,9 @@ BuildRequires:	curl-devel
 BuildRequires:	expat-devel >= 1.95
 BuildRequires:	fcgi-devel
 BuildRequires:	gdbm-devel
-%{?with_hadoop:BuildRequires:	jdk}
+%if %{with java} || %{with hadoop}
+BuildRequires:	jdk
+%endif
 BuildRequires:	keyutils-devel
 BuildRequires:	leveldb-devel
 BuildRequires:	libaio-devel
@@ -113,6 +116,18 @@ Ceph Python bindings.
 %description -n python-ceph -l pl.UTF-8
 Wiązania Pythona do bibliotek Cepha.
 
+%package -n java-cephfs
+Summary:	CephFS Java bindings
+Summary(pl.UTF-8):	Wiązania Javy do biblioteki CephFS
+Group:		Libraries/Java
+Requires:	%{name}-libs = %{version}-%{release}
+
+%description -n java-cephfs
+CephFS Java bindings.
+
+%description -n java-cephfs -l pl.UTF-8
+Wiązania Javy do biblioteki CephFS.
+
 %package fuse
 Summary:	Ceph FUSE-based client
 Summary(pl.UTF-8):	Klient Cepha oparty na FUSE
@@ -188,6 +203,7 @@ Klient Hadoopa dla systemu plików Ceph.
 	--with-radosgw \
 	--with-system-leveldb \
 	--with-system-libs3 \
+	%{?with_java:--enable-cephfs-java --with-jdk-dir=%{_jvmdir}/java} \
 	--disable-silent-rules
 
 %{__make}
@@ -196,8 +212,10 @@ Klient Hadoopa dla systemu plików Ceph.
 rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/tmp,log/ceph/stat} \
 	$RPM_BUILD_ROOT%{_sysconfdir}/{ceph,bash_completion.d,logrotate.d,rc.d/init.d}
+
 %{__make} install \
-	DESTDIR=$RPM_BUILD_ROOT
+	DESTDIR=$RPM_BUILD_ROOT \
+	javadir=%{_javadir}
 
 install -p src/init-ceph $RPM_BUILD_ROOT/etc/rc.d/init.d/ceph
 install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
@@ -207,6 +225,10 @@ install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 %if %{with hadoop}
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/libhadoopcephfs.{la,a}
 %endif
+%if %{with java}
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/libcephfs_jni.{la,a}
+%endif
+
 # packaged as %doc
 %{__rm} $RPM_BUILD_ROOT%{_docdir}/ceph/sample.{ceph.conf,fetch_config}
 
@@ -227,6 +249,9 @@ fi
 
 %post	libs -p /sbin/ldconfig
 %postun	libs -p /sbin/ldconfig
+
+%post	-n java-cephfs -p /sbin/ldconfig
+%postun	-n java-cephfs -p /sbin/ldconfig
 
 %post	-n hadoop-cephfs -p /sbin/ldconfig
 %postun	-n hadoop-cephfs -p /sbin/ldconfig
@@ -257,17 +282,18 @@ fi
 %attr(755,root,root) %{_bindir}/rbd
 %attr(755,root,root) %{_bindir}/ceph-debugpack
 %attr(755,root,root) %{_bindir}/ceph-coverage
+%attr(755,root,root) /sbin/ceph-create-keys
+%attr(755,root,root) /sbin/ceph-disk-activate
+%attr(755,root,root) /sbin/ceph-disk-prepare
+%attr(755,root,root) /sbin/mkcephfs
+%attr(755,root,root) /sbin/mount.ceph
+%attr(755,root,root) /sbin/mount.fuse.ceph
 %dir %{_libdir}/rados-classes
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_lock.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rbd.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_refcount.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
-%attr(755,root,root) /sbin/ceph-create-keys
-%attr(755,root,root) /sbin/ceph-disk-activate
-%attr(755,root,root) /sbin/ceph-disk-prepare
-%attr(755,root,root) /sbin/mkcephfs
-%attr(755,root,root) /sbin/mount.ceph
 %dir %{_libdir}/ceph
 %attr(755,root,root) %{_libdir}/ceph/ceph_common.sh
 %config(noreplace) /etc/logrotate.d/ceph
@@ -333,6 +359,15 @@ fi
 %defattr(644,root,root,755)
 %{py_sitescriptdir}/rados.py[co]
 %{py_sitescriptdir}/rbd.py[co]
+
+%if %{with java}
+%files -n java-cephfs
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libcephfs_jni.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libcephfs_jni.so.1
+%attr(755,root,root) %{_libdir}/libcephfs_jni.so
+%{_javadir}/libcephfs.jar
+%endif
 
 %files fuse
 %defattr(644,root,root,755)
