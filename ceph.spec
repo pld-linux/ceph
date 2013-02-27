@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.56.3
+Version:	0.57
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	949c348b95c72e0870fabb033e4d1f8e
+# Source0-md5:	030c4cf11b37f26cbf202e7c68d9cf2e
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
@@ -263,25 +263,27 @@ fi
 %attr(754,root,root) /etc/rc.d/init.d/ceph
 %dir %{_sysconfdir}/ceph
 %attr(755,root,root) %{_bindir}/ceph
-%attr(755,root,root) %{_bindir}/cephfs
-%attr(755,root,root) %{_bindir}/ceph-conf
-%attr(755,root,root) %{_bindir}/ceph-clsinfo
-%attr(755,root,root) %{_bindir}/ceph-dencoder
-%attr(755,root,root) %{_bindir}/crushtool
-%attr(755,root,root) %{_bindir}/monmaptool
-%attr(755,root,root) %{_bindir}/osdmaptool
 %attr(755,root,root) %{_bindir}/ceph-authtool
-%attr(755,root,root) %{_bindir}/ceph-syn
-%attr(755,root,root) %{_bindir}/ceph-run
-%attr(755,root,root) %{_bindir}/ceph-mon
+%attr(755,root,root) %{_bindir}/ceph-clsinfo
+%attr(755,root,root) %{_bindir}/ceph-conf
+%attr(755,root,root) %{_bindir}/ceph-coverage
+%attr(755,root,root) %{_bindir}/ceph-debugpack
+%attr(755,root,root) %{_bindir}/ceph-dencoder
+%attr(755,root,root) %{_bindir}/ceph-filestore-dump
 %attr(755,root,root) %{_bindir}/ceph-mds
+%attr(755,root,root) %{_bindir}/ceph-mon
 %attr(755,root,root) %{_bindir}/ceph-osd
 %attr(755,root,root) %{_bindir}/ceph-rbdnamer
+%attr(755,root,root) %{_bindir}/ceph-run
+%attr(755,root,root) %{_bindir}/ceph-syn
+%attr(755,root,root) %{_bindir}/cephfs
+%attr(755,root,root) %{_bindir}/crushtool
 %attr(755,root,root) %{_bindir}/librados-config
+%attr(755,root,root) %{_bindir}/monmaptool
+%attr(755,root,root) %{_bindir}/osdmaptool
 %attr(755,root,root) %{_bindir}/rados
 %attr(755,root,root) %{_bindir}/rbd
-%attr(755,root,root) %{_bindir}/ceph-debugpack
-%attr(755,root,root) %{_bindir}/ceph-coverage
+%attr(755,root,root) %{_bindir}/rbd-fuse
 %attr(755,root,root) /sbin/ceph-create-keys
 %attr(755,root,root) /sbin/ceph-disk-activate
 %attr(755,root,root) /sbin/ceph-disk-prepare
@@ -323,6 +325,7 @@ fi
 %{_mandir}/man8/radosgw.8*
 %{_mandir}/man8/radosgw-admin.8*
 %{_mandir}/man8/rbd.8*
+%{_mandir}/man8/rbd-fuse.8*
 
 %dir %{_localstatedir}/lib/ceph
 %dir %{_localstatedir}/lib/ceph/tmp
