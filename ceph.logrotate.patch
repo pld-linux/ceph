@@ -1,25 +1,23 @@
---- ceph-0.56/src/logrotate.conf.orig	2013-01-06 13:46:50.321379068 +0100
-+++ ceph-0.56/src/logrotate.conf	2013-01-06 14:46:15.021304770 +0100
-@@ -4,23 +4,7 @@
+--- ceph-0.58/src/logrotate.conf.orig	2013-03-08 22:30:48.205300063 +0100
++++ ceph-0.58/src/logrotate.conf	2013-03-08 22:31:18.038632150 +0100
+@@ -4,21 +4,7 @@
      compress
      sharedscripts
      postrotate
--        if which invoke-rc.d > /dev/null && [ -x `which invoke-rc.d` ]; then
+-        if which invoke-rc.d > /dev/null 2>&1 && [ -x `which invoke-rc.d` ]; then
 -            invoke-rc.d ceph reload >/dev/null
--        elif which service > /dev/null && [ -x `which service` ]; then
+-        elif which service > /dev/null 2>&1 && [ -x `which service` ]; then
 -            service ceph reload >/dev/null
 -        fi
 -        # Possibly reload twice, but depending on ceph.conf the reload above may be a no-op
--        if which initctl > /dev/null && [ -x `which initctl` ]; then
+-        if which initctl > /dev/null 2>&1 && [ -x `which initctl` ]; then
 -            # upstart reload isn't very helpful here:
 -            #   https://bugs.launchpad.net/upstart/+bug/1012938
--            for type in mon osd mds; do
--		initctl list \
--		    | perl -ne 'print "$+{service} cluster=$+{cluster} id=$+{id}\n" if m{^(?<service>ceph-(mon|osd|mds)+)\s+\((?<cluster>[^/)]+)/(?<id>[^)]+)\) start/}' \
--		    | while read l; do
--		    initctl reload -- $l 2>/dev/null || :
--		done
--            done
+-	    initctl list \
+-		| sed -n 's/^\(ceph-\(mon\|osd\|mds\)\+\)[ \t]\+(\([^ \/]\+\)\/\([^ \/]\+\))[ \t]\+start\/.*$/\1 cluster=\3 id=\4/p' \
+-		| while read l; do
+-		initctl reload -- $l 2>/dev/null || :
+-	    done
 -        fi
 +        service ceph reload >/dev/null 2>/dev/null
      endscript
