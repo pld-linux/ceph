@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.58
+Version:	0.59
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	86c03dbae51545dadfd3ff27371bf15b
+# Source0-md5:	033f9dd30e732982d985d268a7b2ef53
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
@@ -195,7 +195,10 @@ Klient Hadoopa dla systemu plików Ceph.
 %{__autoheader}
 %{__automake}
 %{?with_hadoop:CPPFLAGS="%{rpmcppflags} -I%{_jvmdir}/java/include -I%{_jvmdir}/java/include/linux"}
+# ac_cv_prog_uudecode_base64=no is a hack to compile Test.class instead of
+# using included one which fails with Sun/Oracle JDK 1.6
 %configure \
+	ac_cv_prog_uudecode_base64=no \
 	--sbindir=/sbin \
 	--with-cryptopp \
 	--with-hadoop%{!?with_hadoop:=no} \
@@ -276,6 +279,7 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-run
 %attr(755,root,root) %{_bindir}/ceph-syn
 %attr(755,root,root) %{_bindir}/ceph_filestore_dump
+%attr(755,root,root) %{_bindir}/ceph_mon_store_converter
 %attr(755,root,root) %{_bindir}/cephfs
 %attr(755,root,root) %{_bindir}/crushtool
 %attr(755,root,root) %{_bindir}/librados-config
