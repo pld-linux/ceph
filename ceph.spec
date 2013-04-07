@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.59
+Version:	0.60
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	033f9dd30e732982d985d268a7b2ef53
+# Source0-md5:	062bc372bc8cf81a3340117cde3e7977
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
@@ -364,6 +364,7 @@ fi
 
 %files -n python-ceph
 %defattr(644,root,root,755)
+%{py_sitescriptdir}/cephfs.py[co]
 %{py_sitescriptdir}/rados.py[co]
 %{py_sitescriptdir}/rbd.py[co]
 
