@@ -9,15 +9,6 @@
  
  LIBOS_LDA = libos.a
  
-@@ -146,7 +146,7 @@
- bin_PROGRAMS += cephfs
- 
- librados_config_SOURCES = librados-config.cc
--librados_config_LDADD = libglobal.la librados.la $(PTHREAD_LIBS) $(EXTRALIBS) $(CRYPTO_LIBS)
-+librados_config_LDADD = librados.la $(LIBGLOBAL_LDA) $(PTHREAD_LIBS) $(EXTRALIBS) $(CRYPTO_LIBS)
- bin_PROGRAMS += librados-config
- 
- # synthetic client
 @@ -313,7 +313,7 @@
  libcephfs_la_CFLAGS= ${CRYPTO_CFLAGS} ${AM_CFLAGS}
  libcephfs_la_CXXFLAGS= ${AM_CXXFLAGS}

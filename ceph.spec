@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.65
+Version:	0.66
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	5fb7283f302838ea94d02fa0fc28fd45
+# Source0-md5:	dee4cf21cfb1aedebc29a0a52921c235
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
@@ -198,6 +198,7 @@ Klient Hadoopa dla systemu plików Ceph.
 # ac_cv_prog_uudecode_base64=no is a hack to compile Test.class instead of
 # using included one which fails with Sun/Oracle JDK 1.6
 %configure \
+	%{?with_java:JAVAC=/usr/bin/javac} \
 	ac_cv_prog_uudecode_base64=no \
 	--sbindir=/sbin \
 	--with-cryptopp \
