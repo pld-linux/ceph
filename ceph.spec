@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.66
+Version:	0.67.2
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	dee4cf21cfb1aedebc29a0a52921c235
+# Source0-md5:	65b51c82a2b9a4e77a02c26d3373e3ae
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
@@ -277,6 +277,7 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-mon
 %attr(755,root,root) %{_bindir}/ceph-osd
 %attr(755,root,root) %{_bindir}/ceph-rbdnamer
+%attr(755,root,root) %{_bindir}/ceph-rest-api
 %attr(755,root,root) %{_bindir}/ceph-run
 %attr(755,root,root) %{_bindir}/ceph-syn
 %attr(755,root,root) %{_bindir}/ceph_filestore_dump
@@ -300,9 +301,13 @@ fi
 %dir %{_libdir}/rados-classes
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_lock.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_log.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rbd.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_refcount.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_replica_log.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_statelog.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_version.so*
 %dir %{_libdir}/ceph
 %attr(755,root,root) %{_libdir}/ceph/ceph_common.sh
 %config(noreplace) /etc/logrotate.d/ceph
@@ -319,6 +324,7 @@ fi
 %{_mandir}/man8/ceph-mon.8*
 %{_mandir}/man8/ceph-osd.8*
 %{_mandir}/man8/ceph-rbdnamer.8*
+%{_mandir}/man8/ceph-rest-api.8*
 %{_mandir}/man8/ceph-run.8*
 %{_mandir}/man8/ceph-syn.8*
 %{_mandir}/man8/cephfs.8*
@@ -368,6 +374,7 @@ fi
 %files -n python-ceph
 %defattr(644,root,root,755)
 %{py_sitescriptdir}/ceph_argparse.py[co]
+%{py_sitescriptdir}/ceph_rest_api.py[co]
 %{py_sitescriptdir}/cephfs.py[co]
 %{py_sitescriptdir}/rados.py[co]
 %{py_sitescriptdir}/rbd.py[co]
