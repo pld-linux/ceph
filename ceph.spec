@@ -1,3 +1,4 @@
+# TODO: libzfs
 #
 # Conditional build:
 %bcond_with	hadoop	# Hadoop client (requires JNI)
@@ -6,12 +7,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.67.2
+Version:	0.68
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	65b51c82a2b9a4e77a02c26d3373e3ae
+# Source0-md5:	8ac5df84870747cd59cf0456811df877
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
@@ -276,6 +277,7 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-mds
 %attr(755,root,root) %{_bindir}/ceph-mon
 %attr(755,root,root) %{_bindir}/ceph-osd
+%attr(755,root,root) %{_bindir}/ceph-post-file
 %attr(755,root,root) %{_bindir}/ceph-rbdnamer
 %attr(755,root,root) %{_bindir}/ceph-rest-api
 %attr(755,root,root) %{_bindir}/ceph-run
@@ -299,6 +301,7 @@ fi
 %attr(755,root,root) /sbin/mount.ceph
 %attr(755,root,root) /sbin/mount.fuse.ceph
 %dir %{_libdir}/rados-classes
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_hello.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_lock.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_log.so*
@@ -310,6 +313,7 @@ fi
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_version.so*
 %dir %{_libdir}/ceph
 %attr(755,root,root) %{_libdir}/ceph/ceph_common.sh
+%{_datadir}/ceph
 %config(noreplace) /etc/logrotate.d/ceph
 %config(noreplace) %{_sysconfdir}/bash_completion.d/rados
 %config(noreplace) %{_sysconfdir}/bash_completion.d/ceph
@@ -323,6 +327,7 @@ fi
 %{_mandir}/man8/ceph-mds.8*
 %{_mandir}/man8/ceph-mon.8*
 %{_mandir}/man8/ceph-osd.8*
+%{_mandir}/man8/ceph-post-file.8*
 %{_mandir}/man8/ceph-rbdnamer.8*
 %{_mandir}/man8/ceph-rest-api.8*
 %{_mandir}/man8/ceph-run.8*
