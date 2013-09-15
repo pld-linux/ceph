@@ -1,8 +1,8 @@
-# TODO: libzfs
 #
 # Conditional build:
 %bcond_with	hadoop	# Hadoop client (requires JNI)
 %bcond_without	java	# Java binding
+%bcond_with	zfs	# ZFS support [needs zfs.pc, not provided yet(?)]
 #
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
@@ -45,6 +45,7 @@ BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
 BuildRequires:	rpmbuild(macros) >= 1.228
 BuildRequires:	snappy-devel
+%{?with_zfs:BuildRequires:	zfs-devel}
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
@@ -204,6 +205,7 @@ Klient Hadoopa dla systemu plików Ceph.
 	--sbindir=/sbin \
 	--with-cryptopp \
 	--with-hadoop%{!?with_hadoop:=no} \
+	%{?with_zfs:--with-libzfs} \
 	--with-ocf \
 	--with-radosgw \
 	--with-system-leveldb \
