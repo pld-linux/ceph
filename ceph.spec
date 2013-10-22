@@ -1,21 +1,19 @@
 #
 # Conditional build:
-%bcond_with	hadoop	# Hadoop client (requires JNI)
 %bcond_without	java	# Java binding
 %bcond_with	zfs	# ZFS support [needs zfs.pc, not provided yet(?)]
 #
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.70
+Version:	0.71
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	27a91c715f00e88940f0b2f0bdcd1633
+# Source0-md5:	dad716bed4ecbf7fe31d4dbeec98d654
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
-Patch2:		%{name}-link.patch
 URL:		http://ceph.newdream.net/
 BuildRequires:	autoconf >= 2.59
 BuildRequires:	automake
@@ -25,7 +23,7 @@ BuildRequires:	curl-devel
 BuildRequires:	expat-devel >= 1.95
 BuildRequires:	fcgi-devel
 BuildRequires:	gdbm-devel
-%if %{with java} || %{with hadoop}
+%if %{with java}
 BuildRequires:	jdk
 %endif
 BuildRequires:	keyutils-devel
@@ -45,14 +43,18 @@ BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
 BuildRequires:	rpmbuild(macros) >= 1.228
 BuildRequires:	snappy-devel
+%ifarch %{x8664}
+BuildRequires:	yasm
+%endif
 %{?with_zfs:BuildRequires:	zfs-devel}
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
 Obsoletes:	gcephtool
+Obsoletes:	hadoop-cephfs
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
-%define		skip_post_check_so	libcls_.*.so.*
+%define		skip_post_check_so	libcls_.*.so.* libec_.*.so.*
 
 %description
 Ceph is a distributed network file system designed to provide
@@ -171,24 +173,10 @@ OCF Resource Agents for Ceph processes.
 %description resource-agents -l pl.UTF-8
 Agenci OCF do monitorowania procesów Cepha.
 
-%package -n hadoop-cephfs
-Summary:	Hadoop client for Ceph filesystem
-Summary(pl.UTF-8):	Klient Hadoopa dla systemu plików Ceph
-Group:		Libraries
-Requires:	%{name} = %{version}-%{release}
-Requires:	hadoop
-
-%description -n hadoop-cephfs
-Hadoop client for Ceph filesystem.
-
-%description -n hadoop-cephfs -l pl.UTF-8
-Klient Hadoopa dla systemu plików Ceph.
-
 %prep
 %setup -q
 %patch0 -p1
 %patch1 -p1
-%patch2 -p1
 
 %build
 %{__libtoolize}
@@ -196,7 +184,6 @@ Klient Hadoopa dla systemu plików Ceph.
 %{__autoconf}
 %{__autoheader}
 %{__automake}
-%{?with_hadoop:CPPFLAGS="%{rpmcppflags} -I%{_jvmdir}/java/include -I%{_jvmdir}/java/include/linux"}
 # ac_cv_prog_uudecode_base64=no is a hack to compile Test.class instead of
 # using included one which fails with Sun/Oracle JDK 1.6
 %configure \
@@ -204,7 +191,6 @@ Klient Hadoopa dla systemu plików Ceph.
 	ac_cv_prog_uudecode_base64=no \
 	--sbindir=/sbin \
 	--with-cryptopp \
-	--with-hadoop%{!?with_hadoop:=no} \
 	%{?with_zfs:--with-libzfs} \
 	--with-ocf \
 	--with-radosgw \
@@ -228,10 +214,7 @@ install -p src/init-ceph $RPM_BUILD_ROOT/etc/rc.d/init.d/ceph
 install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 
 # loadable modules
-%{__rm} $RPM_BUILD_ROOT%{_libdir}/rados-classes/*.{a,la}
-%if %{with hadoop}
-%{__rm} $RPM_BUILD_ROOT%{_libdir}/libhadoopcephfs.{la,a}
-%endif
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/{erasure-code,rados-classes}/*.{a,la}
 %if %{with java}
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/libcephfs_jni.{la,a}
 %endif
@@ -259,9 +242,6 @@ fi
 
 %post	-n java-cephfs -p /sbin/ldconfig
 %postun	-n java-cephfs -p /sbin/ldconfig
-
-%post	-n hadoop-cephfs -p /sbin/ldconfig
-%postun	-n hadoop-cephfs -p /sbin/ldconfig
 
 %files
 %defattr(644,root,root,755)
@@ -302,6 +282,13 @@ fi
 %attr(755,root,root) /sbin/mkcephfs
 %attr(755,root,root) /sbin/mount.ceph
 %attr(755,root,root) /sbin/mount.fuse.ceph
+%dir %{_libdir}/erasure-code
+%attr(755,root,root) %{_libdir}/erasure-code/libec_example.so*
+%attr(755,root,root) %{_libdir}/erasure-code/libec_fail_to_initialize.so*
+%attr(755,root,root) %{_libdir}/erasure-code/libec_fail_to_register.so*
+%attr(755,root,root) %{_libdir}/erasure-code/libec_hangs.so*
+%attr(755,root,root) %{_libdir}/erasure-code/libec_jerasure.so*
+%attr(755,root,root) %{_libdir}/erasure-code/libec_missing_entry_point.so*
 %dir %{_libdir}/rados-classes
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_hello.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
@@ -414,11 +401,3 @@ fi
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/mon
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/osd
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/rbd
-
-%if %{with hadoop}
-%files -n hadoop-cephfs
-%defattr(644,root,root,755)
-%attr(755,root,root) %{_libdir}/libhadoopcephfs.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libhadoopcephfs.so.1
-%attr(755,root,root) %{_libdir}/libhadoopcephfs.so
-%endif
