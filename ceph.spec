@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.71
+Version:	0.72
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	dad716bed4ecbf7fe31d4dbeec98d654
+# Source0-md5:	468fba156cbb6163945fe438c8f9870d
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 URL:		http://ceph.newdream.net/
@@ -274,11 +274,11 @@ fi
 %attr(755,root,root) %{_bindir}/rados
 %attr(755,root,root) %{_bindir}/rbd
 %attr(755,root,root) %{_bindir}/rbd-fuse
-%attr(755,root,root) %{_sbindir}/ceph-create-keys
-%attr(755,root,root) %{_sbindir}/ceph-disk
-%attr(755,root,root) %{_sbindir}/ceph-disk-activate
-%attr(755,root,root) %{_sbindir}/ceph-disk-prepare
-%attr(755,root,root) %{_sbindir}/ceph-disk-udev
+%attr(755,root,root) /sbin/ceph-create-keys
+%attr(755,root,root) /sbin/ceph-disk
+%attr(755,root,root) /sbin/ceph-disk-activate
+%attr(755,root,root) /sbin/ceph-disk-prepare
+%attr(755,root,root) /sbin/ceph-disk-udev
 %attr(755,root,root) /sbin/mkcephfs
 %attr(755,root,root) /sbin/mount.ceph
 %attr(755,root,root) /sbin/mount.fuse.ceph
