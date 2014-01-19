@@ -6,15 +6,15 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.73
+Version:	0.75
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
-Source0:	http://ceph.newdream.net/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	0736929dd56b3e546e90afce4cd05ded
+Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
+# Source0-md5:	947eb272041353479d97ca49d80283f9
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
-URL:		http://ceph.newdream.net/
+URL:		http://ceph.com/
 BuildRequires:	autoconf >= 2.59
 BuildRequires:	automake
 BuildRequires:	boost-devel >= 1.34
@@ -214,7 +214,8 @@ install -p src/init-ceph $RPM_BUILD_ROOT/etc/rc.d/init.d/ceph
 install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 
 # loadable modules
-%{__rm} $RPM_BUILD_ROOT%{_libdir}/{erasure-code,rados-classes}/*.{a,la}
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/ceph/erasure-code/*.{a,la}
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/rados-classes/*.la
 %if %{with java}
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/libcephfs_jni.{la,a}
 %endif
@@ -284,13 +285,15 @@ fi
 %attr(755,root,root) /sbin/mkcephfs
 %attr(755,root,root) /sbin/mount.ceph
 %attr(755,root,root) /sbin/mount.fuse.ceph
-%dir %{_libdir}/erasure-code
-%attr(755,root,root) %{_libdir}/erasure-code/libec_example.so*
-%attr(755,root,root) %{_libdir}/erasure-code/libec_fail_to_initialize.so*
-%attr(755,root,root) %{_libdir}/erasure-code/libec_fail_to_register.so*
-%attr(755,root,root) %{_libdir}/erasure-code/libec_hangs.so*
-%attr(755,root,root) %{_libdir}/erasure-code/libec_jerasure.so*
-%attr(755,root,root) %{_libdir}/erasure-code/libec_missing_entry_point.so*
+%dir %{_libdir}/ceph
+%{_libdir}/ceph/ceph_common.sh
+%dir %{_libdir}/ceph/erasure-code
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_example.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_fail_to_initialize.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_fail_to_register.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_hangs.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_missing_entry_point.so*
 %dir %{_libdir}/rados-classes
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_hello.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
@@ -302,8 +305,6 @@ fi
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_statelog.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_version.so*
-%dir %{_libdir}/ceph
-%attr(755,root,root) %{_libdir}/ceph/ceph_common.sh
 %{_datadir}/ceph
 %config(noreplace) /etc/logrotate.d/ceph
 %config(noreplace) %{_sysconfdir}/bash_completion.d/rados
