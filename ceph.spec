@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.75
-Release:	3
+Version:	0.76
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	947eb272041353479d97ca49d80283f9
+# Source0-md5:	7a7b82f711f8fac716284aa8c5e53b75
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 URL:		http://ceph.com/
