@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.76
+Version:	0.77
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	7a7b82f711f8fac716284aa8c5e53b75
+# Source0-md5:	8a6f841e5ed6d8d993849f7dc00c8a7b
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 URL:		http://ceph.com/
@@ -215,7 +215,7 @@ install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 
 # loadable modules
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/ceph/erasure-code/*.{a,la}
-%{__rm} $RPM_BUILD_ROOT%{_libdir}/rados-classes/*.la
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/rados-classes/*.{a,la}
 %if %{with java}
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/libcephfs_jni.{la,a}
 %endif
@@ -304,6 +304,7 @@ fi
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_replica_log.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_statelog.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_user.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_version.so*
 %{_datadir}/ceph
 %config(noreplace) /etc/logrotate.d/ceph
