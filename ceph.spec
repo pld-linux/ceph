@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.77
+Version:	0.78
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	8a6f841e5ed6d8d993849f7dc00c8a7b
+# Source0-md5:	63a26228dc38a5e2d9ecf5ecfc4c9cfb
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 URL:		http://ceph.com/
@@ -43,6 +43,7 @@ BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
 BuildRequires:	rpmbuild(macros) >= 1.228
 BuildRequires:	snappy-devel
+BuildRequires:	xfsprogs-devel
 %ifarch %{x8664}
 BuildRequires:	yasm
 %endif
@@ -252,6 +253,7 @@ fi
 %dir %{_sysconfdir}/ceph
 %attr(755,root,root) %{_bindir}/ceph
 %attr(755,root,root) %{_bindir}/ceph-authtool
+%attr(755,root,root) %{_bindir}/ceph-brag
 %attr(755,root,root) %{_bindir}/ceph-clsinfo
 %attr(755,root,root) %{_bindir}/ceph-conf
 %attr(755,root,root) %{_bindir}/ceph-coverage
