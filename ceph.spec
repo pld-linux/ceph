@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.78
+Version:	0.79
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	63a26228dc38a5e2d9ecf5ecfc4c9cfb
+# Source0-md5:	0ef1af692a1b64c3875899f4f20b2a70
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 URL:		http://ceph.com/
@@ -295,7 +295,13 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_fail_to_register.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_hangs.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_generic.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse3.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse4.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_missing_entry_point.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_generic.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_sse3.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_sse4.so*
 %dir %{_libdir}/rados-classes
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_hello.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
