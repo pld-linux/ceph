@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.79
+Version:	0.80.1
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	0ef1af692a1b64c3875899f4f20b2a70
+# Source0-md5:	8a37b0affc0aa5c23112eaa89250f836
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 URL:		http://ceph.com/
@@ -30,6 +30,7 @@ BuildRequires:	keyutils-devel
 BuildRequires:	leveldb-devel
 BuildRequires:	libaio-devel
 BuildRequires:	libatomic_ops
+BuildRequires:	libblkid-devel
 BuildRequires:	libedit-devel >= 2.11
 BuildRequires:	libfuse-devel
 BuildRequires:	libltdl-devel
