@@ -6,12 +6,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.80.1
+Version:	0.81
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	8a37b0affc0aa5c23112eaa89250f836
+# Source0-md5:	5020b63746ccbaa454aab09450ee7a43
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 URL:		http://ceph.com/
@@ -285,7 +285,6 @@ fi
 %attr(755,root,root) /sbin/ceph-disk-activate
 %attr(755,root,root) /sbin/ceph-disk-prepare
 %attr(755,root,root) /sbin/ceph-disk-udev
-%attr(755,root,root) /sbin/mkcephfs
 %attr(755,root,root) /sbin/mount.ceph
 %attr(755,root,root) /sbin/mount.fuse.ceph
 %dir %{_libdir}/ceph
@@ -337,7 +336,6 @@ fi
 %{_mandir}/man8/cephfs.8*
 %{_mandir}/man8/crushtool.8*
 %{_mandir}/man8/librados-config.8*
-%{_mandir}/man8/mkcephfs.8*
 %{_mandir}/man8/monmaptool.8*
 %{_mandir}/man8/mount.ceph.8*
 %{_mandir}/man8/osdmaptool.8*
