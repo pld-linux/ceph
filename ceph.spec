@@ -1,17 +1,17 @@
 #
 # Conditional build:
 %bcond_without	java	# Java binding
-%bcond_with	zfs	# ZFS support [needs zfs.pc, not provided yet(?)]
+%bcond_with	zfs	# ZFS support
 #
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.81
+Version:	0.82
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	5020b63746ccbaa454aab09450ee7a43
+# Source0-md5:	26cc762f36786ab601705a9d3a30e16e
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 URL:		http://ceph.com/
@@ -190,6 +190,7 @@ Agenci OCF do monitorowania procesów Cepha.
 # using included one which fails with Sun/Oracle JDK 1.6
 %configure \
 	%{?with_java:JAVAC=/usr/bin/javac} \
+	%{?with_zfs:LIBZFS_CFLAGS="-I/usr/include/libzfs -I/usr/include/libspl"} \
 	ac_cv_prog_uudecode_base64=no \
 	--sbindir=/sbin \
 	--with-cryptopp \
@@ -273,6 +274,7 @@ fi
 %attr(755,root,root) %{_bindir}/ceph_filestore_tool
 %attr(755,root,root) %{_bindir}/ceph_mon_store_converter
 %attr(755,root,root) %{_bindir}/cephfs
+%attr(755,root,root) %{_bindir}/cephfs-journal-tool
 %attr(755,root,root) %{_bindir}/crushtool
 %attr(755,root,root) %{_bindir}/librados-config
 %attr(755,root,root) %{_bindir}/monmaptool
