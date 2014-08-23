@@ -1,5 +1,5 @@
---- ceph-0.78/src/logrotate.conf.orig	2014-04-03 18:19:47.067725657 +0200
-+++ ceph-0.78/src/logrotate.conf	2014-04-03 18:26:09.521051018 +0200
+--- ceph-0.84/src/logrotate.conf.orig	2014-08-22 19:12:40.945575009 +0200
++++ ceph-0.84/src/logrotate.conf	2014-08-22 19:14:59.222235873 +0200
 @@ -4,25 +4,7 @@
      compress
      sharedscripts
@@ -14,7 +14,7 @@
 -            for daemon in osd mon mds ; do
 -              find -L /var/lib/ceph/$daemon/ -mindepth 1 -maxdepth 1 -regextype posix-egrep -regex '.*/[A-Za-z0-9]+-[A-Za-z0-9._-]+' -printf '%P\n' \
 -                | while read f; do
--                    if [ -e "/var/lib/ceph/$daemon/$f/done" ] && [ -e "/var/lib/ceph/$daemon/$f/upstart" ] && [ ! -e "/var/lib/ceph/$daemon/$f/sysvinit" ]; then
+-                    if [ -e "/var/lib/ceph/$daemon/$f/done" -o -e "/var/lib/ceph/$daemon/$f/ready" ] && [ -e "/var/lib/ceph/$daemon/$f/upstart" ] && [ ! -e "/var/lib/ceph/$daemon/$f/sysvinit" ]; then
 -                      cluster="${f%%-*}"
 -                      id="${f#*-}"
 -
@@ -26,4 +26,4 @@
 +        service ceph reload >/dev/null 2>/dev/null
      endscript
      missingok
- }
+     notifempty

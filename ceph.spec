@@ -1,3 +1,4 @@
+# TODO: --with-kinetic?
 #
 # Conditional build:
 %bcond_without	java	# Java binding
@@ -6,12 +7,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.82
-Release:	2
+Version:	0.84
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	26cc762f36786ab601705a9d3a30e16e
+# Source0-md5:	c7d8c8483cf1cef4dfb529500ed7ea93
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 URL:		http://ceph.com/
@@ -27,10 +28,10 @@ BuildRequires:	gdbm-devel
 BuildRequires:	jdk
 %endif
 BuildRequires:	keyutils-devel
-BuildRequires:	leveldb-devel
+BuildRequires:	leveldb-devel >= 1.2
 BuildRequires:	libaio-devel
 BuildRequires:	libatomic_ops
-BuildRequires:	libblkid-devel
+BuildRequires:	libblkid-devel >= 2.17
 BuildRequires:	libedit-devel >= 2.11
 BuildRequires:	libfuse-devel
 BuildRequires:	libltdl-devel
@@ -44,6 +45,7 @@ BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
 BuildRequires:	rpmbuild(macros) >= 1.228
 BuildRequires:	snappy-devel
+BuildRequires:	udev-devel
 BuildRequires:	xfsprogs-devel
 %ifarch %{x8664}
 BuildRequires:	yasm
@@ -290,6 +292,7 @@ fi
 %attr(755,root,root) /sbin/mount.ceph
 %attr(755,root,root) /sbin/mount.fuse.ceph
 %dir %{_libdir}/ceph
+%attr(755,root,root) %{_libdir}/ceph/ceph-osd-prestart.sh
 %{_libdir}/ceph/ceph_common.sh
 %dir %{_libdir}/ceph/erasure-code
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_example.so*
@@ -357,6 +360,8 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/libcephfs.so.1
 %attr(755,root,root) %{_libdir}/librados.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librados.so.2
+%attr(755,root,root) %{_libdir}/libradosstriper.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libradosstriper.so.1
 %attr(755,root,root) %{_libdir}/librbd.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librbd.so.1
 
@@ -364,18 +369,22 @@ fi
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libcephfs.so
 %attr(755,root,root) %{_libdir}/librados.so
+%attr(755,root,root) %{_libdir}/libradosstriper.so
 %attr(755,root,root) %{_libdir}/librbd.so
 %{_libdir}/libcephfs.la
 %{_libdir}/librados.la
+%{_libdir}/libradosstriper.la
 %{_libdir}/librbd.la
 %{_includedir}/cephfs
 %{_includedir}/rados
+%{_includedir}/radosstriper
 %{_includedir}/rbd
 
 %files static
 %defattr(644,root,root,755)
 %{_libdir}/libcephfs.a
 %{_libdir}/librados.a
+%{_libdir}/libradosstriper.a
 %{_libdir}/librbd.a
 
 %files -n python-ceph
