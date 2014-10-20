@@ -1,23 +1,26 @@
-# TODO: --with-kinetic?
 #
 # Conditional build:
 %bcond_without	java	# Java binding
+%bcond_with	kinetic	# Kinetic storage support [needs update for internal API changes]
+%bcond_with	rocksdb	# RocksDB storage support [needs update for internal API changes]
 %bcond_with	zfs	# ZFS support
 #
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.84
+Version:	0.87
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	c7d8c8483cf1cef4dfb529500ed7ea93
+# Source0-md5:	172d232cbf4fdf760933265ddcbce5eb
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
+Patch2:		%{name}-boost.patch
 URL:		http://ceph.com/
 BuildRequires:	autoconf >= 2.59
 BuildRequires:	automake
+BuildRequires:	babeltrace-devel
 BuildRequires:	boost-devel >= 1.34
 BuildRequires:	cryptopp-devel
 BuildRequires:	curl-devel
@@ -28,6 +31,7 @@ BuildRequires:	gdbm-devel
 BuildRequires:	jdk
 %endif
 BuildRequires:	keyutils-devel
+%{?with_kinetic:BuildRequires:	kinetic-cpp-client}
 BuildRequires:	leveldb-devel >= 1.2
 BuildRequires:	libaio-devel
 BuildRequires:	libatomic_ops
@@ -43,6 +47,7 @@ BuildRequires:	libuuid-devel
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
+%{?with_rocksdb:BuildRequires:	rocksdb-devel}
 BuildRequires:	rpmbuild(macros) >= 1.228
 BuildRequires:	snappy-devel
 BuildRequires:	udev-devel
@@ -181,6 +186,7 @@ Agenci OCF do monitorowania procesów Cepha.
 %setup -q
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 
 %build
 %{__libtoolize}
@@ -196,6 +202,8 @@ Agenci OCF do monitorowania procesów Cepha.
 	ac_cv_prog_uudecode_base64=no \
 	--sbindir=/sbin \
 	--with-cryptopp \
+	%{?with_kinetic:--with-kinetic} \
+	%{?with_rocksdb:--with-librocksdb} \
 	%{?with_zfs:--with-libzfs} \
 	--with-ocf \
 	--with-radosgw \
@@ -272,8 +280,7 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-rest-api
 %attr(755,root,root) %{_bindir}/ceph-run
 %attr(755,root,root) %{_bindir}/ceph-syn
-%attr(755,root,root) %{_bindir}/ceph_filestore_dump
-%attr(755,root,root) %{_bindir}/ceph_filestore_tool
+%attr(755,root,root) %{_bindir}/ceph_objectstore_tool
 %attr(755,root,root) %{_bindir}/ceph_mon_store_converter
 %attr(755,root,root) %{_bindir}/cephfs
 %attr(755,root,root) %{_bindir}/cephfs-journal-tool
@@ -284,6 +291,8 @@ fi
 %attr(755,root,root) %{_bindir}/rados
 %attr(755,root,root) %{_bindir}/rbd
 %attr(755,root,root) %{_bindir}/rbd-fuse
+%attr(755,root,root) %{_bindir}/rbd-replay
+%attr(755,root,root) %{_bindir}/rbd-replay-prep
 %attr(755,root,root) /sbin/ceph-create-keys
 %attr(755,root,root) /sbin/ceph-disk
 %attr(755,root,root) /sbin/ceph-disk-activate
@@ -303,7 +312,9 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_generic.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse3.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse4.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_lrc.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_missing_entry_point.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_missing_version.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_generic.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_sse3.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_sse4.so*
@@ -349,6 +360,8 @@ fi
 %{_mandir}/man8/radosgw-admin.8*
 %{_mandir}/man8/rbd.8*
 %{_mandir}/man8/rbd-fuse.8*
+%{_mandir}/man8/rbd-replay.8*
+%{_mandir}/man8/rbd-replay-prep.8*
 
 %dir %{_localstatedir}/lib/ceph
 %dir %{_localstatedir}/lib/ceph/tmp

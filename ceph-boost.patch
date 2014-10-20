@@ -1,0 +1,25 @@
+--- ceph-0.87/src/osd/ECBackend.cc.orig	2014-10-14 14:22:35.000000000 +0200
++++ ceph-0.87/src/osd/ECBackend.cc	2014-10-19 20:21:00.537672741 +0200
+@@ -81,7 +81,7 @@
+   lhs << "read_result_t(r=" << rhs.r
+       << ", errors=" << rhs.errors;
+   if (rhs.attrs) {
+-    lhs << ", attrs=" << rhs.attrs;
++    lhs << ", attrs=" << rhs.attrs.get();
+   } else {
+     lhs << ", noattrs";
+   }
+--- ceph-0.87/src/osd/ReplicatedPG.cc.orig	2014-10-14 14:22:35.000000000 +0200
++++ ceph-0.87/src/osd/ReplicatedPG.cc	2014-10-19 20:23:41.797665908 +0200
+@@ -5271,7 +5271,10 @@
+   for (list<OpContext::NotifyAck>::iterator p = ctx->notify_acks.begin();
+        p != ctx->notify_acks.end();
+        ++p) {
+-    dout(10) << "notify_ack " << make_pair(p->watch_cookie, p->notify_id) << dendl;
++    if (p->watch_cookie)
++    dout(10) << "notify_ack " << make_pair(p->watch_cookie.get(), p->notify_id) << dendl;
++    else
++    dout(10) << "notify_ack " << make_pair("NULL", p->notify_id) << dendl;
+     for (map<pair<uint64_t, entity_name_t>, WatchRef>::iterator i =
+ 	   ctx->obc->watchers.begin();
+ 	 i != ctx->obc->watchers.end();
