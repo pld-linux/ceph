@@ -308,6 +308,7 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_fail_to_initialize.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_fail_to_register.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_hangs.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_isa.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_generic.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse3.so*
