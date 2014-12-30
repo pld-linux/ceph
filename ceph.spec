@@ -4,6 +4,11 @@
 %bcond_with	kinetic	# Kinetic storage support [needs update for internal API changes]
 %bcond_with	rocksdb	# RocksDB storage support [needs update for internal API changes]
 %bcond_with	zfs	# ZFS support
+%bcond_without	tcmalloc	# don't use tcmalloc
+
+%ifarch x32
+%undefine	with_tcmalloc
+%endif
 #
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
@@ -22,7 +27,6 @@ BuildRequires:	autoconf >= 2.59
 BuildRequires:	automake
 BuildRequires:	babeltrace-devel
 BuildRequires:	boost-devel >= 1.34
-BuildRequires:	cryptopp-devel
 BuildRequires:	curl-devel
 BuildRequires:	expat-devel >= 1.95
 BuildRequires:	fcgi-devel
@@ -41,9 +45,10 @@ BuildRequires:	libfuse-devel
 BuildRequires:	libltdl-devel
 BuildRequires:	libs3-devel
 BuildRequires:	libstdc++-devel
-BuildRequires:	libtcmalloc-devel
+%{?with_tcmalloc:BuildRequires:	libtcmalloc-devel}
 BuildRequires:	libtool >= 2:1.5
 BuildRequires:	libuuid-devel
+BuildRequires:	nss-devel
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
@@ -91,7 +96,7 @@ License:	LGPL v2.1
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
 Requires:	boost-devel >= 1.34
-Requires:	cryptopp-devel
+Requires:	nss-devel
 Requires:	leveldb-devel
 Requires:	libatomic_ops
 Requires:	libuuid-devel
@@ -201,7 +206,9 @@ Agenci OCF do monitorowania procesów Cepha.
 	%{?with_zfs:LIBZFS_CFLAGS="-I/usr/include/libzfs -I/usr/include/libspl"} \
 	ac_cv_prog_uudecode_base64=no \
 	--sbindir=/sbin \
-	--with-cryptopp \
+	--without-cryptopp \
+	--with-nss \
+	%{!?with_tcmalloc:--without-tcmalloc} \
 	%{?with_kinetic:--with-kinetic} \
 	%{?with_rocksdb:--with-librocksdb} \
 	%{?with_zfs:--with-libzfs} \
@@ -308,7 +315,9 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_fail_to_initialize.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_fail_to_register.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_hangs.so*
+%ifnarch x32
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_isa.so*
+%endif
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_generic.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse3.so*
