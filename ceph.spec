@@ -14,7 +14,7 @@ Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	0.87
-Release:	2
+Release:	3
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
@@ -315,7 +315,7 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_fail_to_initialize.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_fail_to_register.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_hangs.so*
-%ifnarch x32
+%ifarch %{x8664}
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_isa.so*
 %endif
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure.so*
