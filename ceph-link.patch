@@ -1,0 +1,11 @@
+--- ceph-0.92/src/libradosstriper/Makefile.am.orig	2015-02-02 22:32:32.000000000 +0100
++++ ceph-0.92/src/libradosstriper/Makefile.am	2015-02-07 18:25:15.007810402 +0100
+@@ -6,7 +6,7 @@
+ # We need this to avoid basename conflicts with the libradosstriper build tests in test/Makefile.am
+ libradosstriper_la_CXXFLAGS = ${AM_CXXFLAGS}
+ 
+-LIBRADOSSTRIPER_DEPS = $(LIBRADOS_DEPS)
++LIBRADOSSTRIPER_DEPS = $(top_builddir)/src/librados.la $(LIBRADOS_DEPS)
+ libradosstriper_la_LIBADD = $(LIBRADOSSTRIPER_DEPS)
+ libradosstriper_la_LDFLAGS = ${AM_LDFLAGS} -version-info 1:0:0
+ if LINUX

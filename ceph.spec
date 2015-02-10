@@ -1,10 +1,12 @@
 #
 # Conditional build:
-%bcond_without	java	# Java binding
-%bcond_with	kinetic	# Kinetic storage support [needs update for internal API changes]
-%bcond_with	rocksdb	# RocksDB storage support [needs update for internal API changes]
-%bcond_with	zfs	# ZFS support
-%bcond_without	tcmalloc	# don't use tcmalloc
+%bcond_without	java		# Java binding
+%bcond_with	kinetic		# Kinetic storage support [needs update for internal API changes]
+%bcond_with	rocksdb		# RocksDB storage support [needs update for internal API changes]
+%bcond_with	zfs		# ZFS support
+%bcond_without	lttng		# LTTng tracing
+%bcond_without	babeltrace	# Babeltrace traces support
+%bcond_without	tcmalloc	# tcmalloc allocator
 
 %ifarch x32
 %undefine	with_tcmalloc
@@ -13,19 +15,19 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.87
-Release:	3
+Version:	0.92
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	172d232cbf4fdf760933265ddcbce5eb
+# Source0-md5:	e8385508ee9a54f1cf56c1bcc1ec2b77
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
-Patch2:		%{name}-boost.patch
+Patch2:		%{name}-link.patch
 URL:		http://ceph.com/
 BuildRequires:	autoconf >= 2.59
 BuildRequires:	automake
-BuildRequires:	babeltrace-devel
+%{?with_babeltrace:BuildRequires:	babeltrace-devel}
 BuildRequires:	boost-devel >= 1.34
 BuildRequires:	curl-devel
 BuildRequires:	expat-devel >= 1.95
@@ -48,6 +50,7 @@ BuildRequires:	libstdc++-devel
 %{?with_tcmalloc:BuildRequires:	libtcmalloc-devel}
 BuildRequires:	libtool >= 2:1.5
 BuildRequires:	libuuid-devel
+%{?with_lttng:BuildRequires:	lttng-ust-devel}
 BuildRequires:	nss-devel
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
@@ -206,12 +209,14 @@ Agenci OCF do monitorowania procesów Cepha.
 	%{?with_zfs:LIBZFS_CFLAGS="-I/usr/include/libzfs -I/usr/include/libspl"} \
 	ac_cv_prog_uudecode_base64=no \
 	--sbindir=/sbin \
+	%{!?with_babeltrace:--without-babeltrace} \
 	--without-cryptopp \
 	--with-nss \
 	%{!?with_tcmalloc:--without-tcmalloc} \
 	%{?with_kinetic:--with-kinetic} \
 	%{?with_rocksdb:--with-librocksdb} \
 	%{?with_zfs:--with-libzfs} \
+	%{!?with_lttng:--without-lttng} \
 	--with-ocf \
 	--with-radosgw \
 	--with-system-leveldb \
@@ -281,13 +286,13 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-dencoder
 %attr(755,root,root) %{_bindir}/ceph-mds
 %attr(755,root,root) %{_bindir}/ceph-mon
+%attr(755,root,root) %{_bindir}/ceph-objectstore-tool
 %attr(755,root,root) %{_bindir}/ceph-osd
 %attr(755,root,root) %{_bindir}/ceph-post-file
 %attr(755,root,root) %{_bindir}/ceph-rbdnamer
 %attr(755,root,root) %{_bindir}/ceph-rest-api
 %attr(755,root,root) %{_bindir}/ceph-run
 %attr(755,root,root) %{_bindir}/ceph-syn
-%attr(755,root,root) %{_bindir}/ceph_objectstore_tool
 %attr(755,root,root) %{_bindir}/ceph_mon_store_converter
 %attr(755,root,root) %{_bindir}/cephfs
 %attr(755,root,root) %{_bindir}/cephfs-journal-tool
@@ -299,6 +304,7 @@ fi
 %attr(755,root,root) %{_bindir}/rbd
 %attr(755,root,root) %{_bindir}/rbd-fuse
 %attr(755,root,root) %{_bindir}/rbd-replay
+%attr(755,root,root) %{_bindir}/rbd-replay-many
 %attr(755,root,root) %{_bindir}/rbd-replay-prep
 %attr(755,root,root) /sbin/ceph-create-keys
 %attr(755,root,root) /sbin/ceph-disk
@@ -320,12 +326,20 @@ fi
 %endif
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_generic.so*
+%ifarch arm
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_neon.so*
+%endif
+%ifarch %{ix86} %{x8664} x32
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse3.so*
+%endif
+%ifarch %{x8664} x32
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse4.so*
+%endif
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_lrc.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_missing_entry_point.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_missing_version.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_generic.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_neon.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_sse3.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_sse4.so*
 %dir %{_libdir}/rados-classes
@@ -351,6 +365,8 @@ fi
 %{_mandir}/man8/ceph-conf.8*
 %{_mandir}/man8/ceph-debugpack.8*
 %{_mandir}/man8/ceph-dencoder.8*
+%{_mandir}/man8/ceph-deploy.8*
+%{_mandir}/man8/ceph-disk.8*
 %{_mandir}/man8/ceph-mds.8*
 %{_mandir}/man8/ceph-mon.8*
 %{_mandir}/man8/ceph-osd.8*
@@ -371,6 +387,7 @@ fi
 %{_mandir}/man8/rbd.8*
 %{_mandir}/man8/rbd-fuse.8*
 %{_mandir}/man8/rbd-replay.8*
+%{_mandir}/man8/rbd-replay-many.8*
 %{_mandir}/man8/rbd-replay-prep.8*
 
 %dir %{_localstatedir}/lib/ceph
