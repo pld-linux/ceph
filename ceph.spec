@@ -1,3 +1,4 @@
+# TODO: accelio libxio (BR: accelio libibverbs-devel librdmacm-devel
 #
 # Conditional build:
 %bcond_without	java		# Java binding
@@ -15,15 +16,16 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.92
-Release:	4
+Version:	0.94.1
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	e8385508ee9a54f1cf56c1bcc1ec2b77
+# Source0-md5:	e4a625aa2c91fe5d3f0c62faa4716ca2
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
+Patch3:		%{name}-ac.patch
 URL:		http://ceph.com/
 BuildRequires:	autoconf >= 2.59
 BuildRequires:	automake
@@ -195,6 +197,7 @@ Agenci OCF do monitorowania procesów Cepha.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
 
 %build
 %{__libtoolize}
@@ -293,9 +296,9 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-rest-api
 %attr(755,root,root) %{_bindir}/ceph-run
 %attr(755,root,root) %{_bindir}/ceph-syn
-%attr(755,root,root) %{_bindir}/ceph_mon_store_converter
 %attr(755,root,root) %{_bindir}/cephfs
 %attr(755,root,root) %{_bindir}/cephfs-journal-tool
+%attr(755,root,root) %{_bindir}/cephfs-table-tool
 %attr(755,root,root) %{_bindir}/crushtool
 %attr(755,root,root) %{_bindir}/librados-config
 %attr(755,root,root) %{_bindir}/monmaptool
@@ -338,6 +341,7 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_lrc.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_missing_entry_point.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_missing_version.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_generic.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_neon.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_test_jerasure_sse3.so*
