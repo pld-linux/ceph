@@ -17,7 +17,7 @@ Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	0.94.1
-Release:	1
+Release:	2
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
@@ -69,6 +69,7 @@ BuildRequires:	yasm
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
+Requires:	python-%{name} = %{version}-%{release}
 Obsoletes:	gcephtool
 Obsoletes:	hadoop-cephfs
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
