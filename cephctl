@@ -3,6 +3,8 @@
 # It seems this was designed as /etc/init.d/ceph script for controlling the systemd
 # units on SuSE, made into 'cephctl' for PLD
 
+systemd_booted 2>/dev/null || exec /etc/rc.d/init.d/ceph "$@"
+
 action=$1 ; shift
 [ -f /etc/sysconfig/ceph ] && . /etc/sysconfig/ceph
 cluster=${CLUSTER:-ceph}

@@ -23,7 +23,7 @@
 -                  done
 -            done
 -        fi
-+        service ceph reload >/dev/null 2>/dev/null
++        cephctl reload >/dev/null 2>/dev/null
      endscript
      missingok
      notifempty
