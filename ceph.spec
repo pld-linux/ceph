@@ -1,4 +1,8 @@
-# TODO: accelio libxio (BR: accelio libibverbs-devel librdmacm-devel
+# TODO:
+#	- accelio libxio (BR: accelio libibverbs-devel librdmacm-devel
+#	- proper init scripts if non-systemd boot is too be supported
+#         (upstream scripts seem overcomplicated and hardly useful)
+#
 #
 # Conditional build:
 %bcond_without	java		# Java binding
@@ -22,6 +26,14 @@ License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
 # Source0-md5:	e4a625aa2c91fe5d3f0c62faa4716ca2
+Source1:	ceph.sysconfig
+# based on files from https://github.com/ceph/ceph/tree/master/systemd
+Source10:	cephctl
+Source11:	ceph-mds@.service
+Source12:	ceph-mon@.service
+Source13:	ceph-osd@.service
+Source14:	ceph.target
+Source15:	ceph.tmpfiles
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
@@ -232,8 +244,9 @@ Agenci OCF do monitorowania procesów Cepha.
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/tmp,log/ceph/stat} \
-	$RPM_BUILD_ROOT%{_sysconfdir}/{ceph,bash_completion.d,logrotate.d,rc.d/init.d}
+install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/{tmp,mon,osd,mds},log/ceph/stat} \
+	$RPM_BUILD_ROOT%{_sysconfdir}/{ceph,bash_completion.d,logrotate.d,rc.d/init.d} \
+	$RPM_BUILD_ROOT{%{systemdunitdir},%{systemdtmpfilesdir}}
 
 %{__make} install \
 	DESTDIR=$RPM_BUILD_ROOT \
@@ -241,6 +254,11 @@ install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/tmp,log/ceph/stat} \
 
 install -p src/init-ceph $RPM_BUILD_ROOT/etc/rc.d/init.d/ceph
 install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
+
+install %{SOURCE10} $RPM_BUILD_ROOT%{_bindir}
+install %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} $RPM_BUILD_ROOT%{systemdunitdir}
+ln -sf /dev/null $RPM_BUILD_ROOT%{systemdunitdir}/ceph.service
+install %{SOURCE15} $RPM_BUILD_ROOT%{systemdtmpfilesdir}/ceph.conf
 
 # loadable modules
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/ceph/erasure-code/*.{a,la}
@@ -396,6 +414,9 @@ fi
 %{_mandir}/man8/rbd-replay-prep.8*
 
 %dir %{_localstatedir}/lib/ceph
+%dir %{_localstatedir}/lib/ceph/mds
+%dir %{_localstatedir}/lib/ceph/mon
+%dir %{_localstatedir}/lib/ceph/osd
 %dir %{_localstatedir}/lib/ceph/tmp
 %dir %{_localstatedir}/log/ceph
 
