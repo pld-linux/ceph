@@ -25,7 +25,7 @@ if test -n "$config" ; then
 	systemctl "${action}" "ceph-mon@${config}.service" || RC=1
 else
 	case $action in
-    start | stop | status | enable | disable | restart | is-active | is-failed | show | kill | reset-failed  )
+    start | stop | status | enable | disable | restart | is-active | is-failed | show | kill | reset-failed | reload )
         n=0
         if test -n ${lmon} ; then
             for s in ${lmon#=${prefix}} ; do
@@ -44,7 +44,7 @@ else
     ;;
 	*)
 		echo "Invalid paramter : $action"
-        echo "Valid paramters  : start | stop | status | enable | disable | restart | is-active | is-failed | show | kill | reset-failed"
+        echo "Valid paramters  : start | stop | status | enable | disable | restart | is-active | is-failed | show | kill | reset-failed | reload"
 	;;
 	esac
 fi
