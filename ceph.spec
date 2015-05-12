@@ -2,6 +2,7 @@
 #	- accelio libxio (BR: accelio libibverbs-devel librdmacm-devel
 #	- proper init scripts if non-systemd boot is too be supported
 #         (upstream scripts seem overcomplicated and hardly useful)
+#	- run as non-root user
 #
 #
 # Conditional build:
@@ -21,7 +22,7 @@ Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	0.94.1
-Release:	2
+Release:	3
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
@@ -70,7 +71,7 @@ BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
 %{?with_rocksdb:BuildRequires:	rocksdb-devel}
-BuildRequires:	rpmbuild(macros) >= 1.228
+BuildRequires:	rpmbuild(macros) >= 1.671
 BuildRequires:	snappy-devel
 BuildRequires:	udev-devel
 BuildRequires:	xfsprogs-devel
@@ -82,6 +83,7 @@ Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
 Requires:	python-%{name} = %{version}-%{release}
+Requires:	systemd-units >= 38
 Obsoletes:	gcephtool
 Obsoletes:	hadoop-cephfs
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
@@ -244,9 +246,9 @@ Agenci OCF do monitorowania procesów Cepha.
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/{tmp,mon,osd,mds},log/ceph/stat} \
-	$RPM_BUILD_ROOT%{_sysconfdir}/{ceph,bash_completion.d,logrotate.d,rc.d/init.d} \
-	$RPM_BUILD_ROOT{%{systemdunitdir},%{systemdtmpfilesdir}}
+install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/{tmp,mon,osd,mds},log/ceph/stat,run/ceph} \
+	$RPM_BUILD_ROOT%{_sysconfdir}/{ceph,bash_completion.d,logrotate.d,rc.d/init.d,sysconfig} \
+	$RPM_BUILD_ROOT{%{systemdunitdir},%{systemdtmpfilesdir},/etc/systemd/system/ceph.target.wants}
 
 %{__make} install \
 	DESTDIR=$RPM_BUILD_ROOT \
@@ -255,6 +257,7 @@ install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/{tmp,mon,osd,mds},log/ceph
 install -p src/init-ceph $RPM_BUILD_ROOT/etc/rc.d/init.d/ceph
 install -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 
+install %{SOURCE1} $RPM_BUILD_ROOT/etc/sysconfig/ceph
 install %{SOURCE10} $RPM_BUILD_ROOT%{_bindir}
 install %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} $RPM_BUILD_ROOT%{systemdunitdir}
 ln -sf /dev/null $RPM_BUILD_ROOT%{systemdunitdir}/ceph.service
@@ -279,11 +282,18 @@ rm -rf $RPM_BUILD_ROOT
 /sbin/chkconfig --add ceph
 %service ceph restart
 
+# actual services are to be enabled on cluster deployment
+%systemd_post %{name}.target
+
 %preun
 if [ "$1" = "0" ] ; then
 	%service ceph stop
 	/sbin/chkconfig --del ceph
 fi
+%systemd_preun %{name}.target
+
+%postun
+%systemd_reload
 
 %post	libs -p /sbin/ldconfig
 %postun	libs -p /sbin/ldconfig
@@ -296,6 +306,14 @@ fi
 # COPYING specifies licenses of individual parts
 %doc AUTHORS COPYING README src/sample.ceph.conf src/sample.fetch_config
 %attr(754,root,root) /etc/rc.d/init.d/ceph
+%config(noreplace) /etc/sysconfig/ceph
+%dir /etc/systemd/system/ceph.target.wants
+%{systemdunitdir}/ceph-mds@.service
+%{systemdunitdir}/ceph-mon@.service
+%{systemdunitdir}/ceph-osd@.service
+%{systemdunitdir}/ceph.service
+%{systemdunitdir}/ceph.target
+%{systemdtmpfilesdir}/ceph.conf
 %dir %{_sysconfdir}/ceph
 %attr(755,root,root) %{_bindir}/ceph
 %attr(755,root,root) %{_bindir}/ceph-authtool
@@ -315,6 +333,7 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-rest-api
 %attr(755,root,root) %{_bindir}/ceph-run
 %attr(755,root,root) %{_bindir}/ceph-syn
+%attr(755,root,root) %{_bindir}/cephctl
 %attr(755,root,root) %{_bindir}/cephfs
 %attr(755,root,root) %{_bindir}/cephfs-journal-tool
 %attr(755,root,root) %{_bindir}/cephfs-table-tool
@@ -419,6 +438,7 @@ fi
 %dir %{_localstatedir}/lib/ceph/osd
 %dir %{_localstatedir}/lib/ceph/tmp
 %dir %{_localstatedir}/log/ceph
+%dir %{_localstatedir}/run/ceph
 
 %files libs
 %defattr(644,root,root,755)
