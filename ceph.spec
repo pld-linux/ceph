@@ -22,7 +22,7 @@ Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	0.94.2
-Release:	1
+Release:	2
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
@@ -39,6 +39,7 @@ Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
 Patch3:		%{name}-ac.patch
+Patch4:		%{name}-boost.patch
 URL:		http://ceph.com/
 BuildRequires:	autoconf >= 2.59
 BuildRequires:	automake
@@ -213,6 +214,7 @@ Agenci OCF do monitorowania procesów Cepha.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %build
 %{__libtoolize}
