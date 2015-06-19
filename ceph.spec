@@ -1,5 +1,4 @@
 # TODO:
-#	- accelio libxio (BR: accelio libibverbs-devel librdmacm-devel
 #	- proper init scripts if non-systemd boot is too be supported
 #         (upstream scripts seem overcomplicated and hardly useful)
 #	- run as non-root user
@@ -7,6 +6,7 @@
 #
 # Conditional build:
 %bcond_without	java		# Java binding
+%bcond_with	accelio		# Accelio transport support
 %bcond_with	kinetic		# Kinetic storage support [needs update for internal API changes]
 %bcond_with	rocksdb		# RocksDB storage support [needs update for internal API changes]
 %bcond_with	zfs		# ZFS support
@@ -41,6 +41,7 @@ Patch2:		%{name}-link.patch
 Patch3:		%{name}-ac.patch
 Patch4:		%{name}-boost.patch
 URL:		http://ceph.com/
+%{?with_accelio:BuildRequires:	accelio-devel}
 BuildRequires:	autoconf >= 2.59
 BuildRequires:	automake
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -60,7 +61,9 @@ BuildRequires:	libatomic_ops
 BuildRequires:	libblkid-devel >= 2.17
 BuildRequires:	libedit-devel >= 2.11
 BuildRequires:	libfuse-devel
+%{?with_accelio:BuildRequires:	libibverbs-devel}
 BuildRequires:	libltdl-devel
+%{?with_accelio:BuildRequires:	librdmacm-devel}
 BuildRequires:	libs3-devel
 BuildRequires:	libstdc++-devel
 %{?with_tcmalloc:BuildRequires:	libtcmalloc-devel}
@@ -242,7 +245,8 @@ Agenci OCF do monitorowania procesów Cepha.
 	--with-system-leveldb \
 	--with-system-libs3 \
 	%{?with_java:--enable-cephfs-java --with-jdk-dir=%{_jvmdir}/java} \
-	--disable-silent-rules
+	--disable-silent-rules \
+	%{?with_accelio:--enable-xio}
 
 %{__make} -j1
 
