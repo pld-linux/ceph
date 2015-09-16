@@ -21,12 +21,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.94.2
-Release:	2
+Version:	0.94.3
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	249648d35e634adaaeec727408ca6092
+# Source0-md5:	ccbaba6cad56cf71719661a0cdcc6ad6
 Source1:	ceph.sysconfig
 # based on files from https://github.com/ceph/ceph/tree/master/systemd
 Source10:	cephctl
@@ -39,7 +39,6 @@ Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		%{name}-link.patch
 Patch3:		%{name}-ac.patch
-Patch4:		%{name}-boost.patch
 URL:		http://ceph.com/
 %{?with_accelio:BuildRequires:	accelio-devel}
 BuildRequires:	autoconf >= 2.59
@@ -217,7 +216,6 @@ Agenci OCF do monitorowania procesów Cepha.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
-%patch4 -p1
 
 %build
 %{__libtoolize}
@@ -411,6 +409,7 @@ fi
 %{_mandir}/man8/ceph-authtool.8*
 %{_mandir}/man8/ceph-clsinfo.8*
 %{_mandir}/man8/ceph-conf.8*
+%{_mandir}/man8/ceph-create-keys.8*
 %{_mandir}/man8/ceph-debugpack.8*
 %{_mandir}/man8/ceph-dencoder.8*
 %{_mandir}/man8/ceph-deploy.8*
