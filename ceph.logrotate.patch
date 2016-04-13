@@ -1,13 +1,13 @@
---- ceph-0.84/src/logrotate.conf.orig	2014-08-22 19:12:40.945575009 +0200
-+++ ceph-0.84/src/logrotate.conf	2014-08-22 19:14:59.222235873 +0200
+--- ceph-0.94.6/src/logrotate.conf.orig	2016-04-12 20:38:42.246628426 +0200
++++ ceph-0.94.6/src/logrotate.conf	2016-04-12 20:44:06.806614808 +0200
 @@ -4,25 +4,7 @@
      compress
      sharedscripts
      postrotate
--        if which invoke-rc.d > /dev/null 2>&1 && [ -x `which invoke-rc.d` ]; then
--            invoke-rc.d ceph reload >/dev/null
--        elif which service > /dev/null 2>&1 && [ -x `which service` ]; then
+-        if which service > /dev/null 2>&1 && [ -x `which service` ]; then
 -            service ceph reload >/dev/null
+-        elif which invoke-rc.d > /dev/null 2>&1 && [ -x `which invoke-rc.d` ]; then
+-            invoke-rc.d ceph reload >/dev/null
 -        fi
 -        # Possibly reload twice, but depending on ceph.conf the reload above may be a no-op
 -        if which initctl > /dev/null 2>&1 && [ -x `which initctl` ]; then

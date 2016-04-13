@@ -3,7 +3,6 @@
 #         (upstream scripts seem overcomplicated and hardly useful)
 #	- run as non-root user
 #
-#
 # Conditional build:
 %bcond_without	java		# Java binding
 %bcond_with	accelio		# Accelio transport support
@@ -21,12 +20,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.94.3
-Release:	3
+Version:	0.94.6
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
-Source0:	http://ceph.com/download/%{name}-%{version}.tar.bz2
-# Source0-md5:	ccbaba6cad56cf71719661a0cdcc6ad6
+Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
+# Source0-md5:	566cdeae80ee639dcb265ac284a59b48
 Source1:	ceph.sysconfig
 # based on files from https://github.com/ceph/ceph/tree/master/systemd
 Source10:	cephctl
@@ -37,8 +36,6 @@ Source14:	ceph.target
 Source15:	ceph.tmpfiles
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
-Patch2:		%{name}-link.patch
-Patch3:		%{name}-ac.patch
 URL:		http://ceph.com/
 %{?with_accelio:BuildRequires:	accelio-devel}
 BuildRequires:	autoconf >= 2.59
@@ -214,8 +211,6 @@ Agenci OCF do monitorowania procesów Cepha.
 %setup -q
 %patch0 -p1
 %patch1 -p1
-%patch2 -p1
-%patch3 -p1
 
 %build
 %{__libtoolize}
@@ -223,6 +218,8 @@ Agenci OCF do monitorowania procesów Cepha.
 %{__autoconf}
 %{__autoheader}
 %{__automake}
+# required by xfs headers (for off64_t)
+CPPFLAGS="%{rpmcppflags} -D_LARGEFILE64_SOURCE"
 # ac_cv_prog_uudecode_base64=no is a hack to compile Test.class instead of
 # using included one which fails with Sun/Oracle JDK 1.6
 %configure \
@@ -449,23 +446,39 @@ fi
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libcephfs.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libcephfs.so.1
+%attr(755,root,root) %{_libdir}/libos_tp.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libos_tp.so.1
+%attr(755,root,root) %{_libdir}/libosd_tp.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libosd_tp.so.1
 %attr(755,root,root) %{_libdir}/librados.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librados.so.2
+%attr(755,root,root) %{_libdir}/librados_tp.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/librados_tp.so.2
 %attr(755,root,root) %{_libdir}/libradosstriper.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libradosstriper.so.1
 %attr(755,root,root) %{_libdir}/librbd.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librbd.so.1
+%attr(755,root,root) %{_libdir}/librbd_tp.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/librbd_tp.so.1
 
 %files devel
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libcephfs.so
+%attr(755,root,root) %{_libdir}/libos_tp.so
+%attr(755,root,root) %{_libdir}/libosd_tp.so
 %attr(755,root,root) %{_libdir}/librados.so
+%attr(755,root,root) %{_libdir}/librados_tp.so
 %attr(755,root,root) %{_libdir}/libradosstriper.so
 %attr(755,root,root) %{_libdir}/librbd.so
+%attr(755,root,root) %{_libdir}/librbd_tp.so
 %{_libdir}/libcephfs.la
+%{_libdir}/libos_tp.la
+%{_libdir}/libosd_tp.la
 %{_libdir}/librados.la
+%{_libdir}/librados_tp.la
 %{_libdir}/libradosstriper.la
 %{_libdir}/librbd.la
+%{_libdir}/librbd_tp.la
 %{_includedir}/cephfs
 %{_includedir}/rados
 %{_includedir}/radosstriper
@@ -474,9 +487,13 @@ fi
 %files static
 %defattr(644,root,root,755)
 %{_libdir}/libcephfs.a
+%{_libdir}/libos_tp.a
+%{_libdir}/libosd_tp.a
 %{_libdir}/librados.a
+%{_libdir}/librados_tp.a
 %{_libdir}/libradosstriper.a
 %{_libdir}/librbd.a
+%{_libdir}/librbd_tp.a
 
 %files -n python-ceph
 %defattr(644,root,root,755)
