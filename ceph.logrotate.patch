@@ -1,6 +1,6 @@
---- ceph-0.94.6/src/logrotate.conf.orig	2016-04-12 20:38:42.246628426 +0200
-+++ ceph-0.94.6/src/logrotate.conf	2016-04-12 20:44:06.806614808 +0200
-@@ -4,25 +4,7 @@
+--- ceph-0.94.7/src/logrotate.conf.orig	2016-05-21 07:57:16.259310201 +0200
++++ ceph-0.94.7/src/logrotate.conf	2016-05-21 07:59:10.385972051 +0200
+@@ -4,26 +4,7 @@
      compress
      sharedscripts
      postrotate
@@ -23,6 +23,7 @@
 -                  done
 -            done
 -        fi
+-        killall -q -1 ceph-fuse || true
 +        cephctl reload >/dev/null 2>/dev/null
      endscript
      missingok
