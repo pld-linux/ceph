@@ -1,0 +1,390 @@
+diff -ur ceph-0.94.10/src/client/SyntheticClient.cc ceph-0.94.10-cxx/src/client/SyntheticClient.cc
+--- ceph-0.94.10/src/client/SyntheticClient.cc	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/client/SyntheticClient.cc	2017-04-29 12:25:26.633497617 +0200
+@@ -601,7 +601,7 @@
+         int size = iargs.front();  iargs.pop_front();
+         int inflight = iargs.front();  iargs.pop_front();
+         if (run_me()) {
+-          dout(2) << "createobjects " << cout << " of " << size << " bytes"
++          dout(2) << "createobjects " << cout.rdbuf() << " of " << size << " bytes"
+ 		  << ", " << inflight << " in flight" << dendl;
+           create_objects(count, size, inflight);
+         }
+@@ -617,7 +617,7 @@
+         int rskew = iargs.front();  iargs.pop_front();
+         int wskew = iargs.front();  iargs.pop_front();
+         if (run_me()) {
+-          dout(2) << "objectrw " << cout << " " << size << " " << wrpc 
++          dout(2) << "objectrw " << cout.rdbuf() << " " << size << " " << wrpc 
+ 		  << " " << overlap << " " << rskew << " " << wskew << dendl;
+           object_rw(count, size, wrpc, overlap, rskew, wskew);
+         }
+diff -ur ceph-0.94.10/src/common/admin_socket.cc ceph-0.94.10-cxx/src/common/admin_socket.cc
+--- ceph-0.94.10/src/common/admin_socket.cc	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/common/admin_socket.cc	2017-04-29 09:57:25.062251956 +0200
+@@ -352,7 +352,7 @@
+   stringstream errss;
+   cmdvec.push_back(cmd);
+   if (!cmdmap_from_json(cmdvec, &cmdmap, errss)) {
+-    ldout(m_cct, 0) << "AdminSocket: " << errss << dendl;
++    ldout(m_cct, 0) << "AdminSocket: " << errss.rdbuf() << dendl;
+     return false;
+   }
+   cmd_getval(m_cct, cmdmap, "format", format);
+diff -ur ceph-0.94.10/src/common/ceph_json.h ceph-0.94.10-cxx/src/common/ceph_json.h
+--- ceph-0.94.10/src/common/ceph_json.h	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/common/ceph_json.h	2017-04-29 11:13:38.925899980 +0200
+@@ -198,7 +198,7 @@
+     JSONObj *o = *iter;
+     JSONDecoder::decode_json("key", key, o);
+     JSONDecoder::decode_json("val", val, o);
+-    m.insert(make_pair<K, V>(key, val));
++    m.insert(make_pair(key, val));
+   }
+ }
+ 
+diff -ur ceph-0.94.10/src/common/cmdparse.cc ceph-0.94.10-cxx/src/common/cmdparse.cc
+--- ceph-0.94.10/src/common/cmdparse.cc	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/common/cmdparse.cc	2017-04-29 09:58:13.362841243 +0200
+@@ -224,7 +224,7 @@
+   BackTrace bt(1);
+   ostringstream oss;
+   bt.print(oss);
+-  lderr(cct) << oss << dendl;
++  lderr(cct) << oss.rdbuf() << dendl;
+   if (status == 0)
+     free((char *)typestr);
+ }
+diff -ur ceph-0.94.10/src/common/LogClient.h ceph-0.94.10-cxx/src/common/LogClient.h
+--- ceph-0.94.10/src/common/LogClient.h	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/common/LogClient.h	2017-04-29 09:55:08.930587122 +0200
+@@ -137,7 +137,7 @@
+   }
+   bool must_log_to_monitors() { return log_to_monitors; }
+ 
+-  typedef shared_ptr<LogChannel> Ref;
++  typedef std::shared_ptr<LogChannel> Ref;
+ 
+   /**
+    * update config values from parsed k/v map for each config option
+diff -ur ceph-0.94.10/src/mds/CInode.cc ceph-0.94.10-cxx/src/mds/CInode.cc
+--- ceph-0.94.10/src/mds/CInode.cc	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/mds/CInode.cc	2017-04-29 10:44:49.563391124 +0200
+@@ -3791,7 +3791,7 @@
+       f->dump_int("read_ret_val", backtrace.ondisk_read_retval);
+       f->dump_stream("ondisk_value") << backtrace.ondisk_value;
+       f->dump_stream("memoryvalue") << backtrace.memory_value;
+-      f->dump_stream("error_str") << backtrace.error_str;
++      f->dump_stream("error_str") << backtrace.error_str.rdbuf();
+     }
+     f->close_section(); // backtrace
+     f->open_object_section("raw_rstats");
+@@ -3801,7 +3801,7 @@
+       f->dump_int("read_ret_val", raw_rstats.ondisk_read_retval);
+       f->dump_stream("ondisk_value") << raw_rstats.ondisk_value;
+       f->dump_stream("memory_value") << raw_rstats.memory_value;
+-      f->dump_stream("error_str") << raw_rstats.error_str;
++      f->dump_stream("error_str") << raw_rstats.error_str.rdbuf();
+     }
+     f->close_section(); // raw_rstats
+     // dump failure return code
+diff -ur ceph-0.94.10/src/mds/mdstypes.h ceph-0.94.10-cxx/src/mds/mdstypes.h
+--- ceph-0.94.10/src/mds/mdstypes.h	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/mds/mdstypes.h	2017-04-29 11:15:44.723963614 +0200
+@@ -71,7 +71,7 @@
+ #define MDS_TRAVERSE_DISCOVERXLOCK 3    // succeeds on (foreign?) null, xlocked dentries.
+ 
+ 
+-BOOST_STRONG_TYPEDEF(int32_t, mds_rank_t)
++typedef int32_t mds_rank_t;
+ BOOST_STRONG_TYPEDEF(uint64_t, mds_gid_t)
+ extern const mds_gid_t MDS_GID_NONE;
+ extern const mds_rank_t MDS_RANK_NONE;
+diff -ur ceph-0.94.10/src/mon/OSDMonitor.cc ceph-0.94.10-cxx/src/mon/OSDMonitor.cc
+--- ceph-0.94.10/src/mon/OSDMonitor.cc	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/mon/OSDMonitor.cc	2017-04-29 10:17:06.705748922 +0200
+@@ -4401,7 +4401,7 @@
+        if (err == 0) {
+ 	 k = erasure_code->get_data_chunk_count();
+        } else {
+-	 ss << __func__ << " get_erasure_code failed: " << tmp;
++	 ss << __func__ << " get_erasure_code failed: " << tmp.rdbuf();
+ 	 return err;;
+        }
+ 
+diff -ur ceph-0.94.10/src/msg/simple/Pipe.cc ceph-0.94.10-cxx/src/msg/simple/Pipe.cc
+--- ceph-0.94.10/src/msg/simple/Pipe.cc	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/msg/simple/Pipe.cc	2017-04-29 10:05:09.937087135 +0200
+@@ -181,7 +181,7 @@
+ 
+ void Pipe::DelayedDelivery::discard()
+ {
+-  lgeneric_subdout(pipe->msgr->cct, ms, 20) << pipe->_pipe_prefix(_dout) << "DelayedDelivery::discard" << dendl;
++  lgeneric_subdout(pipe->msgr->cct, ms, 20) << pipe->_pipe_prefix(_dout).rdbuf() << "DelayedDelivery::discard" << dendl;
+   Mutex::Locker l(delay_lock);
+   while (!delay_queue.empty()) {
+     Message *m = delay_queue.front().second;
+@@ -193,7 +193,7 @@
+ 
+ void Pipe::DelayedDelivery::flush()
+ {
+-  lgeneric_subdout(pipe->msgr->cct, ms, 20) << pipe->_pipe_prefix(_dout) << "DelayedDelivery::flush" << dendl;
++  lgeneric_subdout(pipe->msgr->cct, ms, 20) << pipe->_pipe_prefix(_dout).rdbuf() << "DelayedDelivery::flush" << dendl;
+   Mutex::Locker l(delay_lock);
+   flush_count = delay_queue.size();
+   delay_cond.Signal();
+@@ -202,11 +202,11 @@
+ void *Pipe::DelayedDelivery::entry()
+ {
+   Mutex::Locker locker(delay_lock);
+-  lgeneric_subdout(pipe->msgr->cct, ms, 20) << pipe->_pipe_prefix(_dout) << "DelayedDelivery::entry start" << dendl;
++  lgeneric_subdout(pipe->msgr->cct, ms, 20) << pipe->_pipe_prefix(_dout).rdbuf() << "DelayedDelivery::entry start" << dendl;
+ 
+   while (!stop_delayed_delivery) {
+     if (delay_queue.empty()) {
+-      lgeneric_subdout(pipe->msgr->cct, ms, 30) << pipe->_pipe_prefix(_dout) << "DelayedDelivery::entry sleeping on delay_cond because delay queue is empty" << dendl;
++      lgeneric_subdout(pipe->msgr->cct, ms, 30) << pipe->_pipe_prefix(_dout).rdbuf() << "DelayedDelivery::entry sleeping on delay_cond because delay queue is empty" << dendl;
+       delay_cond.Wait(delay_lock);
+       continue;
+     }
+@@ -216,11 +216,11 @@
+     if (!flush_count &&
+         (release > ceph_clock_now(pipe->msgr->cct) &&
+          (delay_msg_type.empty() || m->get_type_name() == delay_msg_type))) {
+-      lgeneric_subdout(pipe->msgr->cct, ms, 10) << pipe->_pipe_prefix(_dout) << "DelayedDelivery::entry sleeping on delay_cond until " << release << dendl;
++      lgeneric_subdout(pipe->msgr->cct, ms, 10) << pipe->_pipe_prefix(_dout).rdbuf() << "DelayedDelivery::entry sleeping on delay_cond until " << release << dendl;
+       delay_cond.WaitUntil(delay_lock, release);
+       continue;
+     }
+-    lgeneric_subdout(pipe->msgr->cct, ms, 10) << pipe->_pipe_prefix(_dout) << "DelayedDelivery::entry dequeuing message " << m << " for delivery, past " << release << dendl;
++    lgeneric_subdout(pipe->msgr->cct, ms, 10) << pipe->_pipe_prefix(_dout).rdbuf() << "DelayedDelivery::entry dequeuing message " << m << " for delivery, past " << release << dendl;
+     delay_queue.pop_front();
+     if (flush_count > 0) {
+       --flush_count;
+@@ -245,7 +245,7 @@
+     }
+     active_flush = false;
+   }
+-  lgeneric_subdout(pipe->msgr->cct, ms, 20) << pipe->_pipe_prefix(_dout) << "DelayedDelivery::entry stop" << dendl;
++  lgeneric_subdout(pipe->msgr->cct, ms, 20) << pipe->_pipe_prefix(_dout).rdbuf() << "DelayedDelivery::entry stop" << dendl;
+   return NULL;
+ }
+ 
+diff -ur ceph-0.94.10/src/osd/PG.cc ceph-0.94.10-cxx/src/osd/PG.cc
+--- ceph-0.94.10/src/osd/PG.cc	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/osd/PG.cc	2017-04-29 10:54:40.743267753 +0200
+@@ -3144,7 +3144,7 @@
+ 		  info_struct_v < 8 ? OSD::make_pg_log_oid(pg_id) : pgmeta_oid,
+ 		  info, oss);
+   if (oss.str().length())
+-    osd->clog->error() << oss;
++    osd->clog->error() << oss.rdbuf();
+ 
+   // log any weirdness
+   log_weirdness();
+diff -ur ceph-0.94.10/src/rgw/rgw_cache.cc ceph-0.94.10-cxx/src/rgw/rgw_cache.cc
+--- ceph-0.94.10/src/rgw/rgw_cache.cc	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/rgw/rgw_cache.cc	2017-04-29 11:09:17.823000713 +0200
+@@ -105,7 +105,7 @@
+   for (liter = cache_entry_list.begin(); liter != cache_entry_list.end(); ++liter) {
+     ObjectCacheEntry *entry = *liter;
+ 
+-    entry->chained_entries.push_back(make_pair<RGWChainedCache *, string>(chained_entry->cache, chained_entry->key));
++    entry->chained_entries.push_back(make_pair(chained_entry->cache, chained_entry->key));
+   }
+ 
+   return true;
+diff -ur ceph-0.94.10/src/test/librbd/test_ImageWatcher.cc ceph-0.94.10-cxx/src/test/librbd/test_ImageWatcher.cc
+--- ceph-0.94.10/src/test/librbd/test_ImageWatcher.cc	2017-02-21 16:13:19.000000000 +0100
++++ ceph-0.94.10-cxx/src/test/librbd/test_ImageWatcher.cc	2017-04-29 11:58:28.225636783 +0200
+@@ -383,8 +383,7 @@
+   ASSERT_EQ(0, open_image(m_image_name, &ictx));
+ 
+   ASSERT_EQ(0, register_image_watch(*ictx));
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_ACQUIRED_LOCK, bufferlist()));
++  m_notify_acks = {{NOTIFY_OP_ACQUIRED_LOCK, {}}};
+ 
+   {
+     RWLock::WLocker l(ictx->owner_lock);
+@@ -474,8 +473,7 @@
+   ASSERT_EQ(0, open_image(m_image_name, &ictx));
+ 
+   ASSERT_EQ(0, register_image_watch(*ictx));
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_ACQUIRED_LOCK, bufferlist()));
++  m_notify_acks = {{NOTIFY_OP_ACQUIRED_LOCK, {}}};
+ 
+   {
+     RWLock::WLocker l(ictx->owner_lock);
+@@ -528,8 +526,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+ 			  "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_REQUEST_LOCK, create_response_message(0)));
++  m_notify_acks = {{NOTIFY_OP_REQUEST_LOCK, create_response_message(0)}};
+ 
+   {
+     RWLock::WLocker l(ictx->owner_lock);
+@@ -549,9 +546,7 @@
+   ASSERT_EQ(0, unlock_image());
+ 
+   m_notifies.clear();
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_RELEASED_LOCK, bufferlist()))(
+-    std::make_pair(NOTIFY_OP_ACQUIRED_LOCK, bufferlist()));
++  m_notify_acks = {{NOTIFY_OP_RELEASED_LOCK, {}}, {NOTIFY_OP_ACQUIRED_LOCK, {}}};
+ 
+   bufferlist bl;
+   {
+@@ -578,8 +573,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+ 			  "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_REQUEST_LOCK, bufferlist()));
++  m_notify_acks = {{NOTIFY_OP_REQUEST_LOCK, {}}};
+ 
+   m_expected_aio_restarts = 1;
+   {
+@@ -606,8 +600,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+ 			  "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_REQUEST_LOCK, create_response_message(0)));
++  m_notify_acks = {{NOTIFY_OP_REQUEST_LOCK, create_response_message(0)}};
+ 
+   int orig_notify_timeout = ictx->cct->_conf->client_notify_timeout;
+   ictx->cct->_conf->set_val("client_notify_timeout", "0");
+@@ -645,8 +638,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+                           "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_REQUEST_LOCK, create_response_message(0)));
++  m_notify_acks = {{NOTIFY_OP_REQUEST_LOCK, create_response_message(0)}};
+ 
+   m_expected_aio_restarts = 1;
+   {
+@@ -662,8 +654,7 @@
+   ASSERT_EQ(expected_notify_ops, m_notifies);
+ 
+   m_notifies.clear();
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_RELEASED_LOCK, bufferlist()));
++  m_notify_acks = {{NOTIFY_OP_RELEASED_LOCK, {}}};
+ 
+   bufferlist bl;
+   {
+@@ -703,8 +694,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+                           "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_REQUEST_LOCK, create_response_message(0)));
++  m_notify_acks = {{NOTIFY_OP_REQUEST_LOCK, create_response_message(0)}};
+ 
+   m_expected_aio_restarts = 1;
+   {
+@@ -723,8 +713,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_SHARED, "manually 1234"));
+ 
+   m_notifies.clear();
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_RELEASED_LOCK, bufferlist()));
++  m_notify_acks = {{NOTIFY_OP_RELEASED_LOCK, {}}};
+ 
+   bufferlist bl;
+   {
+@@ -744,8 +733,7 @@
+ 
+   ASSERT_EQ(0, register_image_watch(*ictx));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_HEADER_UPDATE, bufferlist()));
++  m_notify_acks = {{NOTIFY_OP_HEADER_UPDATE, {}}};
+   librbd::ImageWatcher::notify_header_update(m_ioctx, ictx->header_oid);
+ 
+   ASSERT_TRUE(wait_for_notifies(*ictx));
+@@ -765,8 +753,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+         "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_FLATTEN, create_response_message(0)));
++  m_notify_acks = {{NOTIFY_OP_FLATTEN, create_response_message(0)}};
+ 
+   ProgressContext progress_context;
+   FlattenTask flatten_task(ictx, &progress_context);
+@@ -800,8 +787,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+         "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_RESIZE, create_response_message(0)));
++  m_notify_acks = {{NOTIFY_OP_RESIZE, create_response_message(0)}};
+ 
+   ProgressContext progress_context;
+   ResizeTask resize_task(ictx, &progress_context);
+@@ -835,8 +821,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+         "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_SNAP_CREATE, create_response_message(0)));
++  m_notify_acks = {{NOTIFY_OP_SNAP_CREATE, create_response_message(0)}};
+ 
+   RWLock::RLocker l(ictx->owner_lock);
+   ASSERT_EQ(0, ictx->image_watcher->notify_snap_create("snap"));
+@@ -856,8 +841,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+         "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_SNAP_CREATE, create_response_message(-EEXIST)));
++  m_notify_acks = {{NOTIFY_OP_SNAP_CREATE, create_response_message(-EEXIST)}};
+ 
+   RWLock::RLocker l(ictx->owner_lock);
+   ASSERT_EQ(-EEXIST, ictx->image_watcher->notify_snap_create("snap"));
+@@ -877,8 +861,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+         "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_FLATTEN, bufferlist()));
++  m_notify_acks = {{NOTIFY_OP_FLATTEN, {}}};
+ 
+   ProgressContext progress_context;
+   FlattenTask flatten_task(ictx, &progress_context);
+@@ -898,8 +881,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+         "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_FLATTEN, create_response_message(-EIO)));
++  m_notify_acks = {{NOTIFY_OP_FLATTEN, create_response_message(-EIO)}};
+ 
+   ProgressContext progress_context;
+   FlattenTask flatten_task(ictx, &progress_context);
+@@ -919,8 +901,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+         "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_FLATTEN, create_response_message(0)));
++  m_notify_acks = {{NOTIFY_OP_FLATTEN, create_response_message(0)}};
+ 
+   ProgressContext progress_context;
+   FlattenTask flatten_task(ictx, &progress_context);
+@@ -960,8 +941,7 @@
+   ASSERT_EQ(0, lock_image(*ictx, LOCK_EXCLUSIVE,
+ 			  "auto " + stringify(m_watch_ctx->get_handle())));
+ 
+-  m_notify_acks = boost::assign::list_of(
+-    std::make_pair(NOTIFY_OP_FLATTEN, create_response_message(0)));
++  m_notify_acks = {{NOTIFY_OP_FLATTEN, create_response_message(0)}};
+ 
+   ProgressContext progress_context;
+   FlattenTask flatten_task(ictx, &progress_context);

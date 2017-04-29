@@ -3,6 +3,8 @@
 #         (upstream scripts seem overcomplicated and hardly useful)
 #	- run as non-root user
 #
+# Note on versioning: http://docs.ceph.com/docs/master/releases/
+#
 # Conditional build:
 %bcond_without	java		# Java binding
 %bcond_with	accelio		# Accelio transport support
@@ -36,6 +38,7 @@ Source14:	ceph.target
 Source15:	ceph.tmpfiles
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
+Patch2:		cxx.patch
 URL:		http://ceph.com/
 %{?with_accelio:BuildRequires:	accelio-devel}
 BuildRequires:	autoconf >= 2.59
@@ -211,6 +214,7 @@ Agenci OCF do monitorowania procesów Cepha.
 %setup -q
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 
 %build
 %{__libtoolize}
