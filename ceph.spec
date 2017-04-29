@@ -20,12 +20,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	0.94.7
+Version:	0.94.10
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	a8fd1046805551e301cb835f418ade72
+# Source0-md5:	9bf0d6df74e6da3725dcc3b7adf3d849
 Source1:	ceph.sysconfig
 # based on files from https://github.com/ceph/ceph/tree/master/systemd
 Source10:	cephctl
