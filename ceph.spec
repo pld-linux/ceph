@@ -217,6 +217,11 @@ Agenci OCF do monitorowania procesów Cepha.
 %patch2 -p1
 
 %build
+%{__libtoolize}
+%{__aclocal} -I m4
+%{__autoconf}
+%{__autoheader}
+%{__automake}
 # required by xfs headers (for off64_t)
 CPPFLAGS="%{rpmcppflags} -D_FILE_OFFSET_BITS=64"
 # ac_cv_prog_uudecode_base64=no is a hack to compile Test.class instead of
