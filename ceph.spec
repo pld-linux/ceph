@@ -23,7 +23,7 @@ Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	0.94.10
-Release:	1
+Release:	2
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
@@ -39,6 +39,7 @@ Source15:	ceph.tmpfiles
 Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		cxx.patch
+Patch3:		boost.patch
 URL:		http://ceph.com/
 %{?with_accelio:BuildRequires:	accelio-devel}
 BuildRequires:	autoconf >= 2.59
@@ -215,6 +216,7 @@ Agenci OCF do monitorowania procesów Cepha.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
+%patch3 -p0
 
 %build
 %{__libtoolize}
@@ -359,8 +361,9 @@ fi
 %attr(755,root,root) /sbin/ceph-disk-udev
 %attr(755,root,root) /sbin/mount.ceph
 %attr(755,root,root) /sbin/mount.fuse.ceph
+%dir %{_libexecdir}/ceph
+%attr(755,root,root) %{_libexecdir}/ceph/ceph-osd-prestart.sh
 %dir %{_libdir}/ceph
-%attr(755,root,root) %{_libdir}/ceph/ceph-osd-prestart.sh
 %{_libdir}/ceph/ceph_common.sh
 %dir %{_libdir}/ceph/erasure-code
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_example.so*

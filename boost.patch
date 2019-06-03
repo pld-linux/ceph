@@ -1,0 +1,44 @@
+Regressed by https://github.com/boostorg/date_time/commit/f9f2aaf5216c
+
+src/rbd_replay/Replayer.cc:353:65: error: no matching conversion for functional-style cast from 'float' to 'boost::posix_time::microseconds' (aka 'subsecond_duration<boost::posix_time::time_duration, 1000000>')
+    boost::system_time sub_release_time(action_completed_time + boost::posix_time::microseconds(dep.time_delta * m_latency_multiplier / 1000));
+                                                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/local/include/boost/date_time/time_duration.hpp:270:30: note: candidate constructor (the implicit copy constructor) not viable: no known conversion from 'float' to 'const boost::date_time::subsecond_duration<boost::posix_time::time_duration, 1000000>' for 1st argument
+  class BOOST_SYMBOL_VISIBLE subsecond_duration : public base_duration
+                             ^
+/usr/local/include/boost/date_time/time_duration.hpp:270:30: note: candidate constructor (the implicit move constructor) not viable: no known conversion from 'float' to 'boost::date_time::subsecond_duration<boost::posix_time::time_duration, 1000000>' for 1st argument
+/usr/local/include/boost/date_time/time_duration.hpp:286:59: note: candidate template ignored: disabled by 'enable_if' [with T = float]
+                                typename boost::enable_if<boost::is_integral<T>, void>::type* = 0) :
+                                                          ^
+
+src/test/librbd/test_mock_Journal.cc:485:42: error: reference to '_1' is ambiguous
+      std::bind(&invoke_replay_complete, _1, 0));
+                                         ^
+/usr/local/include/boost/bind/placeholders.hpp:46:38: note: candidate found by name lookup is 'boost::placeholders::_1'
+BOOST_STATIC_CONSTEXPR boost::arg<1> _1;
+                                     ^
+/usr/include/c++/v1/functional:2021:21: note: candidate found by name lookup is 'std::__1::placeholders::_1'
+constexpr __ph<1>   _1{};
+                    ^
+
+--- src/rbd_replay/Replayer.cc.orig	2018-02-26 21:47:18 UTC
++++ src/rbd_replay/Replayer.cc
+@@ -350,7 +350,7 @@ void Replayer::wait_for_actions(const action::Dependen
+     dout(DEPGRAPH_LEVEL) << "Finished waiting for " << dep.id << " after " << micros << " microseconds" << dendl;
+     // Apparently the nanoseconds constructor is optional:
+     // http://www.boost.org/doc/libs/1_46_0/doc/html/date_time/details.html#compile_options
+-    boost::system_time sub_release_time(action_completed_time + boost::posix_time::microseconds(dep.time_delta * m_latency_multiplier / 1000));
++    boost::system_time sub_release_time(action_completed_time + boost::posix_time::microseconds(long(dep.time_delta * m_latency_multiplier / 1000)));
+     if (sub_release_time > release_time) {
+       release_time = sub_release_time;
+     }
+--- ceph-0.94.10/src/mon/MDSMonitor.cc.orig	2019-06-03 22:46:11.352201283 +0200
++++ ceph-0.94.10/src/mon/MDSMonitor.cc	2019-06-03 22:46:23.110188378 +0200
+@@ -14,6 +14,7 @@
+ 
+ #include <sstream>
+ #include <boost/utility.hpp>
++#include <boost/next_prior.hpp>
+ 
+ #include "MDSMonitor.h"
+ #include "Monitor.h"
