@@ -40,7 +40,7 @@ Patch0:		%{name}-init-fix.patch
 Patch1:		%{name}.logrotate.patch
 Patch2:		cxx.patch
 Patch3:		boost.patch
-URL:		http://ceph.com/
+URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 BuildRequires:	autoconf >= 2.59
 BuildRequires:	automake
@@ -76,6 +76,7 @@ BuildRequires:	pkgconfig
 BuildRequires:	python >= 1:2.4
 %{?with_rocksdb:BuildRequires:	rocksdb-devel}
 BuildRequires:	rpmbuild(macros) >= 1.671
+BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
 BuildRequires:	udev-devel
 BuildRequires:	xfsprogs-devel
@@ -217,6 +218,13 @@ Agenci OCF do monitorowania procesów Cepha.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p0
+
+%{__sed} -i -e '1s,/usr/bin/env python$,%{__python},' \
+	src/{ceph-create-keys,ceph-disk,ceph-rest-api} \
+	src/brag/client/ceph-brag
+
+# adjust rule used to create ceph from ceph.in
+%{__sed} -i -e 's,"#!/usr/bin/env python","#!%{__python}",' src/Makefile-client.am
 
 %build
 %{__libtoolize}
@@ -361,7 +369,9 @@ fi
 %attr(755,root,root) /sbin/ceph-disk-udev
 %attr(755,root,root) /sbin/mount.ceph
 %attr(755,root,root) /sbin/mount.fuse.ceph
+%if "%{_libexecdir}" != "%{_libdir}"
 %dir %{_libexecdir}/ceph
+%endif
 %attr(755,root,root) %{_libexecdir}/ceph/ceph-osd-prestart.sh
 %dir %{_libdir}/ceph
 %{_libdir}/ceph/ceph_common.sh
