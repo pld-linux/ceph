@@ -1,29 +1,10 @@
---- ceph-0.94.7/src/logrotate.conf.orig	2016-05-21 07:57:16.259310201 +0200
-+++ ceph-0.94.7/src/logrotate.conf	2016-05-21 07:59:10.385972051 +0200
-@@ -4,26 +4,7 @@
+--- ceph-10.2.11/src/logrotate.conf.orig	2018-07-09 18:23:56.000000000 +0200
++++ ceph-10.2.11/src/logrotate.conf	2020-05-23 15:03:02.828288220 +0200
+@@ -4,7 +4,7 @@
      compress
      sharedscripts
      postrotate
--        if which service > /dev/null 2>&1 && [ -x `which service` ]; then
--            service ceph reload >/dev/null
--        elif which invoke-rc.d > /dev/null 2>&1 && [ -x `which invoke-rc.d` ]; then
--            invoke-rc.d ceph reload >/dev/null
--        fi
--        # Possibly reload twice, but depending on ceph.conf the reload above may be a no-op
--        if which initctl > /dev/null 2>&1 && [ -x `which initctl` ]; then
--            for daemon in osd mon mds ; do
--              find -L /var/lib/ceph/$daemon/ -mindepth 1 -maxdepth 1 -regextype posix-egrep -regex '.*/[A-Za-z0-9]+-[A-Za-z0-9._-]+' -printf '%P\n' \
--                | while read f; do
--                    if [ -e "/var/lib/ceph/$daemon/$f/done" -o -e "/var/lib/ceph/$daemon/$f/ready" ] && [ -e "/var/lib/ceph/$daemon/$f/upstart" ] && [ ! -e "/var/lib/ceph/$daemon/$f/sysvinit" ]; then
--                      cluster="${f%%-*}"
--                      id="${f#*-}"
--
--                      initctl reload ceph-$daemon cluster="$cluster" id="$id" 2>/dev/null || :
--                    fi
--                  done
--            done
--        fi
--        killall -q -1 ceph-fuse || true
+-        killall -q -1 ceph-mon ceph-mds ceph-osd ceph-fuse radosgw || true
 +        cephctl reload >/dev/null 2>/dev/null
      endscript
      missingok

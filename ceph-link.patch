@@ -1,0 +1,175 @@
+--- ceph-10.2.11/configure.ac.orig	2018-07-09 18:23:56.000000000 +0200
++++ ceph-10.2.11/configure.ac	2020-05-22 21:04:23.958900423 +0200
+@@ -760,12 +760,12 @@
+ 
+ if test "x$enable_xio" = x"yes"; then
+    AC_CHECK_HEADER([libxio.h], [], AC_MSG_ERROR([Cannot find header 'libxio.h'.]))
+-   AC_CHECK_LIB([xio], [xio_init], [], AC_MSG_FAILURE([Accelio libxio not found]))
+-   AC_CHECK_LIB([ibverbs], [ibv_query_device], [], AC_MSG_FAILURE([libibverbs not found]))
+-   AC_CHECK_LIB([rdmacm], [rdma_connect], [], AC_MSG_FAILURE([librdmacm not found]))
++   AC_CHECK_LIB([xio], [xio_init], [true], AC_MSG_FAILURE([Accelio libxio not found]))
++   AC_CHECK_LIB([ibverbs], [ibv_query_device], [true], AC_MSG_FAILURE([libibverbs not found]))
++   AC_CHECK_LIB([rdmacm], [rdma_connect], [true], AC_MSG_FAILURE([librdmacm not found]))
+ 
+    # Also require boost-regex, used in address_helper
+-   AC_CHECK_LIB(boost_regex, main, [],
++   AC_CHECK_LIB(boost_regex, main, [true],
+       AC_MSG_FAILURE(["Boost regex library not found."]))
+ 
+    AC_DEFINE([HAVE_XIO], [1], [Accelio conditional compilation])
+@@ -874,7 +874,7 @@
+ AS_IF([test "x$with_librocksdb" = "xyes"],
+             [PKG_CHECK_MODULES([LIBROCKSDB], [rocksdb], [], [true])])
+ AS_IF([test "x$with_librocksdb" = "xyes"],
+-            [AC_CHECK_LIB([rocksdb], [open], [], [AC_MSG_FAILURE([librocksdb not found])])])
++            [AC_CHECK_LIB([rocksdb], [open], [true], [AC_MSG_FAILURE([librocksdb not found])])])
+ AM_CONDITIONAL(WITH_DLIBROCKSDB, [ test "$with_librocksdb" = "yes" ])
+ 
+ AC_ARG_WITH([librocksdb-static],
+@@ -897,8 +897,8 @@
+ 
+ # needs libcurl and libxml2
+ if test "x$with_rest_bench" = xyes && test "x$with_system_libs3" = xno; then
+-   AC_CHECK_LIB([curl], [curl_easy_init], [], AC_MSG_ERROR([libcurl not found]))
+-   AC_CHECK_LIB([xml2], [xmlParseChunk], [], AC_MSG_ERROR([libxml2 not found]))
++   AC_CHECK_LIB([curl], [curl_easy_init], [true], AC_MSG_ERROR([libcurl not found]))
++   AC_CHECK_LIB([xml2], [xmlParseChunk], [true], AC_MSG_ERROR([libxml2 not found]))
+ fi
+ 
+ # use libaio?
+--- ceph-10.2.11/src/kv/Makefile.am.orig	2018-07-09 18:23:56.000000000 +0200
++++ ceph-10.2.11/src/kv/Makefile.am	2020-05-22 21:08:20.037621475 +0200
+@@ -1,12 +1,12 @@
+ if ENABLE_SERVER
+ 
+-libkv_a_SOURCES = \
++libkv_la_SOURCES = \
+ 	kv/KeyValueDB.cc \
+ 	kv/LevelDBStore.cc
+-libkv_a_CXXFLAGS = ${AM_CXXFLAGS}
+-libkv_a_LIBADD =
++libkv_la_CXXFLAGS = ${AM_CXXFLAGS}
++libkv_la_LIBADD =
+ 
+-noinst_LIBRARIES += libkv.a
++noinst_LTLIBRARIES += libkv.la
+ 
+ noinst_HEADERS += \
+ 	kv/KeyValueDB.h \
+@@ -29,22 +29,22 @@
+ 
+ rocksdb/librocksdb.a:
+ 	cd rocksdb && $(ROCKSDB_MAKE_VARS) $(MAKE) -j$(shell ${NPROC}) static_lib
+-libkv_a_CXXFLAGS += -I rocksdb/include -fPIC
+-libkv_a_SOURCES += kv/RocksDBStore.cc
+-libkv_a_LIBADD += rocksdb/librocksdb.a
++libkv_la_CXXFLAGS += -I rocksdb/include -fPIC
++libkv_la_SOURCES += kv/RocksDBStore.cc
++libkv_la_LIBADD += rocksdb/librocksdb.a
+ noinst_HEADERS += kv/RocksDBStore.h
+ endif
+ 
+ if WITH_DLIBROCKSDB
+-libkv_a_SOURCES += kv/RocksDBStore.cc
+-libkv_a_LIBADD += -lrocksdb
++libkv_la_SOURCES += kv/RocksDBStore.cc
++libkv_la_LIBADD += -lrocksdb
+ noinst_HEADERS += kv/RocksDBStore.h
+ endif
+ 
+ if WITH_KINETIC
+-libkv_a_SOURCES += kv/KineticStore.cc
+-libkv_a_CXXFLAGS += -std=gnu++11
+-libkv_a_LIBADD += -lkinetic_client -lprotobuf -lglog -lgflags libcrypto.a
++libkv_la_SOURCES += kv/KineticStore.cc
++libkv_la_CXXFLAGS += -std=gnu++11
++libkv_la_LIBADD += -lkinetic_client -lprotobuf -lglog -lgflags libcrypto.a
+ noinst_HEADERS += kv/KineticStore.h
+ endif
+ 
+--- ceph-10.2.11/src/os/Makefile.am.orig	2018-07-09 18:23:56.000000000 +0200
++++ ceph-10.2.11/src/os/Makefile.am	2020-05-22 21:11:02.663407123 +0200
+@@ -12,7 +12,7 @@
+ 
+ if ENABLE_SERVER
+ 
+-libos_a_SOURCES = \
++libos_la_SOURCES = \
+ 	os/filestore/chain_xattr.cc \
+ 	os/filestore/DBObjectMap.cc \
+ 	os/filestore/FileJournal.cc \
+@@ -31,11 +31,11 @@
+ 	os/ObjectStore.cc
+ 
+ if WITH_FUSE
+-libos_a_SOURCES += os/FuseStore.cc
++libos_la_SOURCES += os/FuseStore.cc
+ endif
+ 
+ if WITH_LIBAIO
+-libos_a_SOURCES += \
++libos_la_SOURCES += \
+ 	os/bluestore/kv.cc \
+ 	os/bluestore/Allocator.cc \
+ 	os/bluestore/BlockDevice.cc \
+@@ -48,25 +48,25 @@
+ endif
+ 
+ if LINUX
+-libos_a_SOURCES += os/filestore/BtrfsFileStoreBackend.cc
++libos_la_SOURCES += os/filestore/BtrfsFileStoreBackend.cc
+ endif
+ 
+ if WITH_LIBXFS
+-libos_a_SOURCES += \
++libos_la_SOURCES += \
+     os/filestore/XfsFileStoreBackend.cc \
+     os/fs/XFS.cc
+ endif
+ 
+ if WITH_LIBZFS
+-libos_a_SOURCES += os/filestore/ZFSFileStoreBackend.cc
++libos_la_SOURCES += os/filestore/ZFSFileStoreBackend.cc
+ endif
+ 
+-libos_a_CXXFLAGS = ${AM_CXXFLAGS} -I rocksdb/include -fPIC
+-libos_a_LIBADD = libos_types.a libkv.a
+-noinst_LIBRARIES += libos.a
++libos_la_CXXFLAGS = ${AM_CXXFLAGS} -I rocksdb/include -fPIC
++libos_la_LIBADD = libos_types.a libkv.la
++noinst_LTLIBRARIES += libos.la
+ 
+ if WITH_LTTNG
+-libos_a_LIBADD += $(LIBOS_TP)
++libos_la_LIBADD += $(LIBOS_TP)
+ endif
+ 
+ noinst_HEADERS += \
+@@ -140,11 +140,11 @@
+ 	${top_srcdir}/src/spdk/lib/util/libspdk_util.a \
+ 	${top_srcdir}/src/spdk/lib/ioat/libspdk_ioat.a
+ 
+-libos_a_CXXFLAGS += \
++libos_la_CXXFLAGS += \
+ 	${LIBSPDK_CFLAGS} \
+ 	${LIBDPDK_CFLAGS} \
+ 	${LIBPCIACCESS_CFLAGS}
+-libos_a_SOURCES += os/bluestore/NVMEDevice.cc
++libos_la_SOURCES += os/bluestore/NVMEDevice.cc
+ noinst_HEADERS += os/bluestore/NVMEDevice.h
+ endif
+ 
+--- ceph-10.2.11/src/Makefile-env.am.orig	2018-07-09 18:23:56.000000000 +0200
++++ ceph-10.2.11/src/Makefile-env.am	2020-05-22 21:11:33.779905217 +0200
+@@ -203,9 +203,9 @@
+ LIBCRUSH = libcrush.la
+ LIBCOMPRESSOR = libcompressor.la
+ LIBJSON_SPIRIT = libjson_spirit.la
+-LIBKV = libkv.a
++LIBKV = libkv.la
+ LIBLOG = liblog.la
+-LIBOS = libos.a
++LIBOS = libos.la
+ LIBOS_TYPES = libos_types.a
+ LIBOSD = libosd.a
+ LIBOSD_TYPES = libosd_types.la

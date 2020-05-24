@@ -1,0 +1,47 @@
+--- ceph-10.2.11/src/ceph-detect-init/Makefile.am.orig	2018-07-09 18:23:56.000000000 +0200
++++ ceph-10.2.11/src/ceph-detect-init/Makefile.am	2020-05-23 15:54:24.161595205 +0200
+@@ -67,15 +67,9 @@
+ ceph-detect-init-install-data:
+ 	cd $(srcdir)/ceph-detect-init ; \
+ 	if test "$(DESTDIR)" ; then \
+-		if lsb_release -si | grep --quiet 'Ubuntu\|Debian\|Devuan' ; then \
+-			options=--install-layout=deb ; \
+-		else \
+ 			options=--prefix=/usr ; \
+-		fi ; \
+ 		root="--root=$(DESTDIR)" ; \
+ 	fi ; \
+-	python setup.py install $$root $$options
++	$(PYTHON) setup.py install $$root $$options --optimize=2
+ 
+-LOCAL_ALL += ceph-detect-init-all
+-LOCAL_CLEAN += ceph-detect-init-clean
+ LOCAL_INSTALLDATA += ceph-detect-init-install-data
+--- ceph-10.2.11/src/ceph-disk/Makefile.am.orig	2018-07-09 18:23:56.000000000 +0200
++++ ceph-10.2.11/src/ceph-disk/Makefile.am	2020-05-23 15:55:36.397870535 +0200
+@@ -32,7 +32,7 @@
+ 
+ export CEPH_DISK_VIRTUALENV = ${CEPH_BUILD_VIRTUALENV}/ceph-disk-virtualenv
+ 
+-ceph-disk-all: ${CEPH_DISK_VIRTUALENV}
++ceph-disk-init-all: ${CEPH_DISK_VIRTUALENV}
+ 
+ ${CEPH_DISK_VIRTUALENV}:
+ 	cd $(srcdir)/ceph-disk ; ../tools/setup-virtualenv.sh ${CEPH_DISK_VIRTUALENV} ; test -d wheelhouse && export NO_INDEX=--no-index ; ${CEPH_DISK_VIRTUALENV}/bin/pip install $$NO_INDEX --find-links=file://$$(pwd)/wheelhouse -e .
+@@ -43,15 +43,10 @@
+ ceph-disk-install-data:
+ 	cd $(srcdir)/ceph-disk ; \
+ 	if test "$(DESTDIR)" ; then \
+-		if lsb_release -si | grep --quiet 'Ubuntu\|Debian\|Devuan' ; then \
+-			options=--install-layout=deb ; \
+-		else \
+ 			options=--prefix=/usr ; \
+-		fi ; \
+ 		root="--root=$(DESTDIR) --install-script=/usr/sbin" ; \
+ 	fi ; \
+-	python setup.py install $$root $$options
++	$(PYTHON) setup.py install $$root $$options --optimize=2
+ 
+-LOCAL_ALL += ceph-disk-all
+ LOCAL_CLEAN += ceph-disk-clean
+ LOCAL_INSTALLDATA += ceph-disk-install-data
