@@ -9,6 +9,7 @@
 # Conditional build:
 %bcond_without	java		# Java binding
 %bcond_with	accelio		# Accelio transport support [needs update for internal API changes]
+%bcond_with	dpdk		# DPDK (Ceph SPDK) support
 %bcond_with	kinetic		# Kinetic storage support [needs update for internal API changes]
 %bcond_without	rocksdb		# RocksDB storage support
 %bcond_with	zfs		# ZFS support [not ready for zfs 0.8.x]
@@ -45,6 +46,8 @@ BuildRequires:	automake
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
 BuildRequires:	boost-devel >= 1.34
 BuildRequires:	curl-devel
+# rte_eal rte_mempool rte_ring
+%{?with_dpdk:BuildRequires:	dpdk-devel}
 BuildRequires:	expat-devel >= 1.95
 BuildRequires:	fcgi-devel
 BuildRequires:	gdbm-devel
@@ -82,6 +85,7 @@ BuildRequires:	snappy-devel
 BuildRequires:	sphinx-pdg-2 >= 1.0
 BuildRequires:	udev-devel
 #BuildRequires:	virtualenv  disabled in python patch
+%{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
 BuildRequires:	xfsprogs-devel
 %ifarch %{x8664}
 BuildRequires:	yasm
@@ -268,6 +272,7 @@ CPPFLAGS="%{rpmcppflags} -D_FILE_OFFSET_BITS=64"
 	%{!?with_lttng:--without-lttng} \
 	--with-ocf \
 	--with-radosgw \
+	%{?with_dpdk:--with-spdk} \
 	--with-system-leveldb \
 	--with-systemd-unit-dir=%{systemdunitdir} \
 	%{?with_java:--enable-cephfs-java --with-jdk-dir=%{_jvmdir}/java} \
