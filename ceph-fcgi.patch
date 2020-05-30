@@ -1,0 +1,22 @@
+--- ceph-12.2.13/src/rgw/CMakeLists.txt.orig	2020-01-30 21:52:36.000000000 +0100
++++ ceph-12.2.13/src/rgw/CMakeLists.txt	2020-05-28 21:27:33.099627687 +0200
+@@ -135,6 +135,7 @@
+ 
+ 
+ if (WITH_RADOSGW_FCGI_FRONTEND)
++  include_directories(SYSTEM ${FCGI_INCLUDE_DIR})
+   list(APPEND rgw_a_srcs rgw_fcgi.cc)
+ endif()
+ 
+--- ceph-12.2.13/src/test/CMakeLists.txt.orig	2020-01-30 21:52:36.000000000 +0100
++++ ceph-12.2.13/src/test/CMakeLists.txt	2020-05-28 22:29:50.639379697 +0200
+@@ -352,6 +352,9 @@
+   )
+ set_target_properties(ceph_test_librgw_file_marker PROPERTIES COMPILE_FLAGS
+   ${UNITTEST_CXX_FLAGS})
++if(WITH_RADOSGW_FCGI_FRONTEND)
++target_include_directories(ceph_test_librgw_file_marker PRIVATE ${FCGI_INCLUDE_DIR})
++endif(WITH_RADOSGW_FCGI_FRONTEND)
+ target_link_libraries(ceph_test_librgw_file_marker
+   rgw
+   librados

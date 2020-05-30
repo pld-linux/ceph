@@ -1,0 +1,56 @@
+--- ceph-12.2.13/src/kv/RocksDBStore.cc.orig	2020-01-30 21:52:36.000000000 +0100
++++ ceph-12.2.13/src/kv/RocksDBStore.cc	2020-05-28 18:54:37.329337101 +0200
+@@ -522,7 +522,7 @@
+   // considering performance overhead, default is disabled
+   if (g_conf->rocksdb_perf) {
+     rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTimeExceptForMutex);
+-    rocksdb::perf_context.Reset();
++    rocksdb::get_perf_context()->Reset();
+   }
+ 
+   RocksDBTransactionImpl * _t =
+@@ -549,13 +549,13 @@
+     utime_t write_wal_time;
+     utime_t write_pre_and_post_process_time;
+     write_wal_time.set_from_double(
+-	static_cast<double>(rocksdb::perf_context.write_wal_time)/1000000000);
++	static_cast<double>(rocksdb::get_perf_context()->write_wal_time)/1000000000);
+     write_memtable_time.set_from_double(
+-	static_cast<double>(rocksdb::perf_context.write_memtable_time)/1000000000);
++	static_cast<double>(rocksdb::get_perf_context()->write_memtable_time)/1000000000);
+     write_delay_time.set_from_double(
+-	static_cast<double>(rocksdb::perf_context.write_delay_time)/1000000000);
++	static_cast<double>(rocksdb::get_perf_context()->write_delay_time)/1000000000);
+     write_pre_and_post_process_time.set_from_double(
+-	static_cast<double>(rocksdb::perf_context.write_pre_and_post_process_time)/1000000000);
++	static_cast<double>(rocksdb::get_perf_context()->write_pre_and_post_process_time)/1000000000);
+     logger->tinc(l_rocksdb_write_memtable_time, write_memtable_time);
+     logger->tinc(l_rocksdb_write_delay_time, write_delay_time);
+     logger->tinc(l_rocksdb_write_wal_time, write_wal_time);
+@@ -575,7 +575,7 @@
+   // considering performance overhead, default is disabled
+   if (g_conf->rocksdb_perf) {
+     rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTimeExceptForMutex);
+-    rocksdb::perf_context.Reset();
++    rocksdb::get_perf_context()->Reset();
+   }
+ 
+   RocksDBTransactionImpl * _t =
+@@ -603,13 +603,13 @@
+     utime_t write_wal_time;
+     utime_t write_pre_and_post_process_time;
+     write_wal_time.set_from_double(
+-	static_cast<double>(rocksdb::perf_context.write_wal_time)/1000000000);
++	static_cast<double>(rocksdb::get_perf_context()->write_wal_time)/1000000000);
+     write_memtable_time.set_from_double(
+-	static_cast<double>(rocksdb::perf_context.write_memtable_time)/1000000000);
++	static_cast<double>(rocksdb::get_perf_context()->write_memtable_time)/1000000000);
+     write_delay_time.set_from_double(
+-	static_cast<double>(rocksdb::perf_context.write_delay_time)/1000000000);
++	static_cast<double>(rocksdb::get_perf_context()->write_delay_time)/1000000000);
+     write_pre_and_post_process_time.set_from_double(
+-	static_cast<double>(rocksdb::perf_context.write_pre_and_post_process_time)/1000000000);
++	static_cast<double>(rocksdb::get_perf_context()->write_pre_and_post_process_time)/1000000000);
+     logger->tinc(l_rocksdb_write_memtable_time, write_memtable_time);
+     logger->tinc(l_rocksdb_write_delay_time, write_delay_time);
+     logger->tinc(l_rocksdb_write_wal_time, write_wal_time);
