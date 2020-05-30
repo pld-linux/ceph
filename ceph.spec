@@ -450,10 +450,8 @@ fi
 %endif
 %attr(755,root,root) %{_libexecdir}/ceph/ceph-monstore-update-crush.sh
 %attr(755,root,root) %{_libexecdir}/ceph/ceph-osd-prestart.sh
-%dir %{_libdir}/ceph
 %{_libdir}/ceph/ceph_common.sh
 %{_libdir}/ceph/mgr
-%attr(755,root,root) %{_libdir}/ceph/libceph-common.so*
 %dir %{_libdir}/ceph/compressor
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_lz4.so*
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_snappy.so*
@@ -573,6 +571,8 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librbd_tp.so.1
 %attr(755,root,root) %{_libdir}/librgw.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librgw.so.2
+%dir %{_libdir}/ceph
+%attr(755,root,root) %{_libdir}/ceph/libceph-common.so.0
 
 %files devel
 %defattr(644,root,root,755)
@@ -585,6 +585,7 @@ fi
 %attr(755,root,root) %{_libdir}/librbd.so
 %attr(755,root,root) %{_libdir}/librbd_tp.so
 %attr(755,root,root) %{_libdir}/librgw.so
+%attr(755,root,root) %{_libdir}/ceph/libceph-common.so
 %{_includedir}/cephfs
 %{_includedir}/rados
 %{_includedir}/radosstriper
