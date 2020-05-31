@@ -51,6 +51,7 @@ Patch5:		%{name}-tcmalloc.patch
 Patch6:		%{name}-rocksdb.patch
 Patch7:		%{name}-fcgi.patch
 Patch8:		%{name}-fio.patch
+Patch9:		%{name}-zfs.patch
 URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -96,7 +97,8 @@ BuildRequires:	python >= 1:2.7
 BuildRequires:	python-devel >= 1:2.7
 BuildRequires:	python-Cython
 BuildRequires:	python3-devel >= 1:3.2
-%{?with_rocksdb:BuildRequires:	rocksdb-devel >= 3.0.0}
+# upstream uses 3.0.0, rocksdb patch adjusts for 5.6.0 API change
+%{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.6.0}
 BuildRequires:	rpmbuild(macros) >= 1.671
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
@@ -108,7 +110,8 @@ BuildRequires:	xfsprogs-devel
 %ifarch %{x8664}
 BuildRequires:	yasm
 %endif
-%{?with_zfs:BuildRequires:	zfs-devel}
+# zfs patch updates to 0.8.0 API
+%{?with_zfs:BuildRequires:	zfs-devel >= 0.8.0}
 BuildRequires:	zlib-devel
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
@@ -250,7 +253,9 @@ Summary:	FIO engine module for Ceph ObjectStore
 Summary(pl.UTF-8):	Moduł silnika FIO do używania Ceph ObjectStore
 Group:		Libraries
 Requires:	%{name}-libs = %{version}-%{release}
+%if %{with fio}
 %requires_ge_to	fio fio-devel
+%endif
 
 %description -n fio-ceph-objectstore
 This FIO engine allows you to mount and use a ceph object store
@@ -272,6 +277,7 @@ uruchamiania demonów.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env python$,%{__python},' \
 	src/{ceph-create-keys,ceph-rest-api,mount.fuse.ceph} \

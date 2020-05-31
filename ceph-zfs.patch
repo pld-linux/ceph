@@ -1,0 +1,9 @@
+--- ceph-12.2.13/src/os/fs/ZFS.cc.orig	2020-01-30 21:52:36.000000000 +0100
++++ ceph-12.2.13/src/os/fs/ZFS.cc	2020-05-31 17:23:41.051356069 +0200
+@@ -79,5 +79,5 @@
+ 
+ int ZFS::iter_snapshots_sorted(ZFS::Handle *h, ZFS::iter_func f, void *d)
+ {
+-  return ::zfs_iter_snapshots_sorted((zfs_handle_t*)h, (zfs_iter_f)f, d);
++  return ::zfs_iter_snapshots_sorted((zfs_handle_t*)h, (zfs_iter_f)f, d, 0, 0);
+ }
