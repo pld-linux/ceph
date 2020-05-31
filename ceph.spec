@@ -56,6 +56,7 @@ URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
 BuildRequires:	boost-devel >= 1.66
+BuildRequires:	boost-python-devel >= 1.66
 BuildRequires:	cmake >= 2.8.11
 %{?with_cryptopp:BuildRequires:	cryptopp-devel}
 BuildRequires:	curl-devel
