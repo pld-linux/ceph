@@ -1,0 +1,11 @@
+--- ceph-12.2.13/src/test/fio/fio_ceph_objectstore.cc.orig	2020-01-30 21:52:36.000000000 +0100
++++ ceph-12.2.13/src/test/fio/fio_ceph_objectstore.cc	2020-05-31 08:19:04.978377543 +0200
+@@ -340,7 +340,7 @@
+   }
+ };
+ 
+-int fio_ceph_os_queue(thread_data* td, io_u* u)
++fio_q_status fio_ceph_os_queue(thread_data* td, io_u* u)
+ {
+   fio_ro_check(td, u);
+ 

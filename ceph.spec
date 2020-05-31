@@ -50,6 +50,7 @@ Patch4:		%{name}-types.patch
 Patch5:		%{name}-tcmalloc.patch
 Patch6:		%{name}-rocksdb.patch
 Patch7:		%{name}-fcgi.patch
+Patch8:		%{name}-fio.patch
 URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -244,6 +245,22 @@ OCF Resource Agents for Ceph processes.
 %description resource-agents -l pl.UTF-8
 Agenci OCF do monitorowania procesów Cepha.
 
+%package -n fio-ceph-objectstore
+Summary:	FIO engine module for Ceph ObjectStore
+Summary(pl.UTF-8):	Moduł silnika FIO do używania Ceph ObjectStore
+Group:		Libraries
+Requires:	%{name}-libs = %{version}-%{release}
+%requires_ge_to	fio fio-devel
+
+%description -n fio-ceph-objectstore
+This FIO engine allows you to mount and use a ceph object store
+directly, without having to build a ceph cluster or start any daemons.
+
+%description -n fio-ceph-objectstore -l pl.UTF-8
+Ten silnik FIO pozwala na bezpośrednie montowanie i używanie
+przestrzeni obiektów ceph, bez potrzeby budowania klastra ceph czy
+uruchamiania demonów.
+
 %prep
 %setup -q
 %patch0 -p1
@@ -254,6 +271,7 @@ Agenci OCF do monitorowania procesów Cepha.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env python$,%{__python},' \
 	src/{ceph-create-keys,ceph-rest-api,mount.fuse.ceph} \
@@ -662,3 +680,10 @@ fi
 %defattr(644,root,root,755)
 %dir %{_prefix}/lib/ocf/resource.d/ceph
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/rbd
+
+%if %{with fio}
+%files -n fio-ceph-objectstore
+%defattr(644,root,root,755)
+%doc src/test/fio/{README.md,ceph-*.conf,ceph-*.fio}
+%attr(755,root,root) %{_libdir}/libfio_ceph_objectstore.so
+%endif
