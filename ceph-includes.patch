@@ -1,0 +1,12 @@
+--- ../BUILD/ceph-12.2.13/src/common/bit_str.h.orig	2020-01-30 21:52:36.000000000 +0100
++++ ../BUILD/ceph-12.2.13/src/common/bit_str.h	2020-05-31 19:08:32.698492649 +0200
+@@ -14,7 +14,9 @@
+ #ifndef CEPH_COMMON_BIT_STR_H
+ #define CEPH_COMMON_BIT_STR_H
+ 
++#include <cstdint>
+ #include <functional>
++#include <ostream>
+ 
+ namespace ceph {
+   class Formatter;

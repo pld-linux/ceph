@@ -52,6 +52,7 @@ Patch6:		%{name}-rocksdb.patch
 Patch7:		%{name}-fcgi.patch
 Patch8:		%{name}-fio.patch
 Patch9:		%{name}-zfs.patch
+Patch10:	%{name}-includes.patch
 URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -279,6 +280,7 @@ uruchamiania demonów.
 %patch7 -p1
 %patch8 -p1
 %patch9 -p1
+%patch10 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env python$,%{__python},' \
 	src/{ceph-create-keys,ceph-rest-api,mount.fuse.ceph} \
