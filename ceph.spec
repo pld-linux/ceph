@@ -10,12 +10,12 @@
 %bcond_with	accelio		# Accelio transport support [needs update for internal API changes]
 %bcond_with	cryptopp	# use cryptopp instead of NSS crypto/SSL
 %bcond_with	dpdk		# DPDK messaging (requires cryptopp instead of nss)
-%bcond_with	fcgi		# RADOS Gateway FCGI frontend
-%bcond_with	fio		# FIO engines support
+%bcond_without	fcgi		# RADOS Gateway FCGI frontend
+%bcond_without	fio		# FIO engines support
 %bcond_without	pmem		# PMDK (persistent memory) support
 %bcond_with	spdk		# Ceph SPDK support (DPDK based)
 %bcond_without	system_rocksdb	# system RocksDB storage support
-%bcond_with	zfs		# ZFS support [not ready for zfs 0.8.x]
+%bcond_without	zfs		# ZFS support [not ready for zfs 0.8.x]
 %bcond_without	lttng		# LTTng tracing
 %bcond_without	babeltrace	# Babeltrace traces support
 %bcond_without	tcmalloc	# tcmalloc allocator
