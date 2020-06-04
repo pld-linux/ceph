@@ -99,6 +99,7 @@ BuildRequires:	python >= 1:2.7
 BuildRequires:	python-devel >= 1:2.7
 BuildRequires:	python-Cython
 BuildRequires:	python3-devel >= 1:3.2
+BuildRequires:	python3-Cython
 # upstream uses 3.0.0, rocksdb patch adjusts for 5.6.0 API change
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.6.0}
 BuildRequires:	rpmbuild(macros) >= 1.671
@@ -475,9 +476,9 @@ fi
 %if "%{_libexecdir}" != "%{_libdir}"
 %dir %{_libexecdir}/ceph
 %endif
-%attr(755,root,root) %{_libexecdir}/ceph/ceph-monstore-update-crush.sh
+%{_libexecdir}/ceph/ceph_common.sh
 %attr(755,root,root) %{_libexecdir}/ceph/ceph-osd-prestart.sh
-%{_libdir}/ceph/ceph_common.sh
+%attr(755,root,root) %{_libdir}/ceph/ceph-monstore-update-crush.sh
 %{_libdir}/ceph/mgr
 %dir %{_libdir}/ceph/compressor
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_lz4.so*

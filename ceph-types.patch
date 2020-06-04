@@ -18,3 +18,61 @@
  				  cct->_conf->osd_pg_log_trim_max);
      dout(10) << __func__ << " num_to_trim =  " << num_to_trim << dendl;
      if (num_to_trim < cct->_conf->osd_pg_log_trim_min &&
+--- ceph-12.2.13/src/os/filestore/FileStore.h.orig	2020-01-30 21:52:36.000000000 +0100
++++ ceph-12.2.13/src/os/filestore/FileStore.h	2020-06-03 14:29:43.325143770 +0200
+@@ -57,7 +57,7 @@
+ 
+ #if defined(__linux__)
+ # ifndef BTRFS_SUPER_MAGIC
+-#define BTRFS_SUPER_MAGIC 0x9123683EL
++#define BTRFS_SUPER_MAGIC 0x9123683EUL
+ # endif
+ # ifndef XFS_SUPER_MAGIC
+ #define XFS_SUPER_MAGIC 0x58465342L
+--- ceph-12.2.13/src/os/filestore/FileStore.cc.orig	2020-01-30 21:52:36.000000000 +0100
++++ ceph-12.2.13/src/os/filestore/FileStore.cc	2020-06-03 21:27:26.387210803 +0200
+@@ -779,7 +779,7 @@
+ 
+ FileStoreBackend *FileStoreBackend::create(long f_type, FileStore *fs)
+ {
+-  switch (f_type) {
++  switch (static_cast<uint32_t>(f_type)) {
+ #if defined(__linux__)
+   case BTRFS_SUPER_MAGIC:
+     return new BtrfsFileStoreBackend(fs);
+@@ -808,7 +808,7 @@
+ 	  << " (magic 0x" << std::hex << f_type << std::dec << ")"
+ 	  << dendl;
+ 
+-  switch (f_type) {
++  switch (static_cast<uint32_t>(f_type)) {
+ #if defined(__linux__)
+   case BTRFS_SUPER_MAGIC:
+     if (!m_disable_wbthrottle){
+@@ -922,7 +922,7 @@
+   }
+ 
+ #if defined(__linux__)
+-  if (basefs.f_type == BTRFS_SUPER_MAGIC &&
++  if (static_cast<uint32_t>(basefs.f_type) == BTRFS_SUPER_MAGIC &&
+       !g_ceph_context->check_experimental_feature_enabled("btrfs")) {
+     derr << __FUNC__ << ": deprecated btrfs support is not enabled" << dendl;
+     goto close_fsid_fd;
+@@ -1208,7 +1208,7 @@
+   blk_size = st.f_bsize;
+ 
+ #if defined(__linux__)
+-  if (st.f_type == BTRFS_SUPER_MAGIC &&
++  if (static_cast<uint32_t>(st.f_type) == BTRFS_SUPER_MAGIC &&
+       !g_ceph_context->check_experimental_feature_enabled("btrfs")) {
+     derr <<__FUNC__ << ": deprecated btrfs support is not enabled" << dendl;
+     return -EPERM;
+@@ -5949,7 +5949,7 @@
+   uint32_t fs_xattrs;
+   uint32_t fs_xattr_max_value_size;
+ 
+-  switch (m_fs_type) {
++  switch (static_cast<uint32_t>(m_fs_type)) {
+ #if defined(__linux__)
+   case XFS_SUPER_MAGIC:
+     fs_xattr_size = cct->_conf->filestore_max_inline_xattr_size_xfs;
