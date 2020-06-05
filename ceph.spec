@@ -485,6 +485,10 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_snappy.so*
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_zlib.so*
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_zstd.so*
+%ifarch %{x8664}
+%dir %{_libdir}/ceph/crypto
+%attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_isal.so*
+%endif
 %dir %{_libdir}/ceph/erasure-code
 %ifarch %{x8664}
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_isa.so*
