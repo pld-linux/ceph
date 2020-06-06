@@ -40,10 +40,8 @@ Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
 # Source0-md5:	38bd01cf8224c9ca081298e19ab6e5a1
 Source1:	ceph.sysconfig
-Source2:	cephctl
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-init-fix.patch
-Patch1:		%{name}.logrotate.patch
 Patch2:		boost.patch
 Patch3:		%{name}-python.patch
 Patch4:		%{name}-types.patch
@@ -272,7 +270,6 @@ uruchamiania demonów.
 %prep
 %setup -q
 %patch0 -p1
-%patch1 -p1
 %patch2 -p0
 %patch3 -p1
 %patch4 -p1
@@ -332,7 +329,6 @@ install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/{tmp,mon,osd,mds,mgr,rados
 cp -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 
 cp -p %{SOURCE1} $RPM_BUILD_ROOT/etc/sysconfig/ceph
-install %{SOURCE2} $RPM_BUILD_ROOT%{_bindir}
 ln -sf /dev/null $RPM_BUILD_ROOT%{systemdunitdir}/ceph.service
 cp -p %{SOURCE3} $RPM_BUILD_ROOT%{systemdtmpfilesdir}/ceph.conf
 
@@ -450,7 +446,6 @@ fi
 %attr(755,root,root) %{_bindir}/ceph_smalliobenchrbd
 %attr(755,root,root) %{_bindir}/ceph_tpbench
 %attr(755,root,root) %{_bindir}/ceph_xattr_bench
-%attr(755,root,root) %{_bindir}/cephctl
 %attr(755,root,root) %{_bindir}/cephfs-data-scan
 %attr(755,root,root) %{_bindir}/cephfs-journal-tool
 %attr(755,root,root) %{_bindir}/cephfs-table-tool
