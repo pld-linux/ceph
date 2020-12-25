@@ -308,7 +308,8 @@ cd build
 	%{?with_system_rocksdb:-DWITH_SYSTEM_ROCKSDB=ON} \
 	-DWITH_SYSTEMD=ON \
 	%{?with_accelio:-DWITH_XIO=ON} \
-	%{?with_zfs:-DWITH_ZFS=ON}
+	%{?with_zfs:-DWITH_ZFS=ON} \
+	-DWITH_REENTRANT_STRSIGNAL=ON
 
 %{__make}
 
