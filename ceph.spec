@@ -19,6 +19,7 @@
 %bcond_without	lttng		# LTTng tracing
 %bcond_without	babeltrace	# Babeltrace traces support
 %bcond_without	tcmalloc	# tcmalloc allocator
+%bcond_with	tests		# build tests
 
 %ifarch x32
 %undefine	with_tcmalloc
@@ -309,7 +310,8 @@ cd build
 	-DWITH_SYSTEMD=ON \
 	%{?with_accelio:-DWITH_XIO=ON} \
 	%{?with_zfs:-DWITH_ZFS=ON} \
-	-DWITH_REENTRANT_STRSIGNAL=ON
+	-DWITH_REENTRANT_STRSIGNAL=ON \
+	%{!?with_tests:-DWITH_TESTS=OFF}
 
 %{__make}
 
@@ -340,8 +342,10 @@ cp -p %{SOURCE3} $RPM_BUILD_ROOT%{systemdtmpfilesdir}/ceph.conf
 %py3_comp $RPM_BUILD_ROOT%{py3_sitescriptdir}
 %py3_ocomp $RPM_BUILD_ROOT%{py3_sitescriptdir}
 
+%if %{with tests}
 # tests
 %{__rm} $RPM_BUILD_ROOT%{_bindir}/ceph_test_*
+%endif
 # packaged as %doc
 %{__rm} $RPM_BUILD_ROOT%{_docdir}/sample.ceph.conf
 # cleanup
