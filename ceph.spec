@@ -250,6 +250,18 @@ OCF Resource Agents for Ceph processes.
 %description resource-agents -l pl.UTF-8
 Agenci OCF do monitorowania procesów Cepha.
 
+%package test
+Summary:	Ceph benchmarks and test tools
+Summary(pl.UTF-8):	Narzędzia testowe oraz do mierzenia wydajności dla Ceph
+Group:		Applications/System
+Requires:	%{name} = %{version}-%{release}
+
+%description test
+Ceph benchmarks and test tools.
+
+%description test -l pl.UTF-8
+Narzędzia testowe oraz do mierzenia wydajności dla Ceph.
+
 %package -n fio-ceph-objectstore
 Summary:	FIO engine module for Ceph ObjectStore
 Summary(pl.UTF-8):	Moduł silnika FIO do używania Ceph ObjectStore
@@ -407,50 +419,21 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-authtool
 %attr(755,root,root) %{_bindir}/ceph-bluestore-tool
 %attr(755,root,root) %{_bindir}/ceph-brag
-%attr(755,root,root) %{_bindir}/ceph-client-debug
 %attr(755,root,root) %{_bindir}/ceph-clsinfo
 %attr(755,root,root) %{_bindir}/ceph-conf
-%attr(755,root,root) %{_bindir}/ceph-coverage
 %attr(755,root,root) %{_bindir}/ceph-crush-location
-%attr(755,root,root) %{_bindir}/ceph-debugpack
 %attr(755,root,root) %{_bindir}/ceph-dencoder
 %attr(755,root,root) %{_bindir}/ceph-detect-init
-%attr(755,root,root) %{_bindir}/ceph-kvstore-tool
 %attr(755,root,root) %{_bindir}/ceph-mds
 %attr(755,root,root) %{_bindir}/ceph-mgr
 %attr(755,root,root) %{_bindir}/ceph-mon
-%attr(755,root,root) %{_bindir}/ceph-monstore-tool
 %attr(755,root,root) %{_bindir}/ceph-objectstore-tool
 %attr(755,root,root) %{_bindir}/ceph-osd
-%attr(755,root,root) %{_bindir}/ceph-osdomap-tool
 %attr(755,root,root) %{_bindir}/ceph-post-file
 %attr(755,root,root) %{_bindir}/ceph-rbdnamer
 %attr(755,root,root) %{_bindir}/ceph-rest-api
 %attr(755,root,root) %{_bindir}/ceph-run
 %attr(755,root,root) %{_bindir}/ceph-syn
-%attr(755,root,root) %{_bindir}/ceph_bench_log
-%attr(755,root,root) %{_bindir}/ceph_erasure_code
-%attr(755,root,root) %{_bindir}/ceph_erasure_code_benchmark
-%attr(755,root,root) %{_bindir}/ceph_kvstorebench
-%attr(755,root,root) %{_bindir}/ceph_multi_stress_watch
-%attr(755,root,root) %{_bindir}/ceph_objectstore_bench
-%attr(755,root,root) %{_bindir}/ceph_omapbench
-%attr(755,root,root) %{_bindir}/ceph_perf_local
-%attr(755,root,root) %{_bindir}/ceph_perf_msgr_client
-%attr(755,root,root) %{_bindir}/ceph_perf_msgr_server
-%attr(755,root,root) %{_bindir}/ceph_perf_objectstore
-%attr(755,root,root) %{_bindir}/ceph_psim
-%attr(755,root,root) %{_bindir}/ceph_radosacl
-%attr(755,root,root) %{_bindir}/ceph_rgw_jsonparser
-%attr(755,root,root) %{_bindir}/ceph_rgw_multiparser
-%attr(755,root,root) %{_bindir}/ceph_scratchtool
-%attr(755,root,root) %{_bindir}/ceph_scratchtoolpp
-%attr(755,root,root) %{_bindir}/ceph_smalliobench
-%attr(755,root,root) %{_bindir}/ceph_smalliobenchdumb
-%attr(755,root,root) %{_bindir}/ceph_smalliobenchfs
-%attr(755,root,root) %{_bindir}/ceph_smalliobenchrbd
-%attr(755,root,root) %{_bindir}/ceph_tpbench
-%attr(755,root,root) %{_bindir}/ceph_xattr_bench
 %attr(755,root,root) %{_bindir}/cephfs-data-scan
 %attr(755,root,root) %{_bindir}/cephfs-journal-tool
 %attr(755,root,root) %{_bindir}/cephfs-table-tool
@@ -478,7 +461,6 @@ fi
 %endif
 %{_libexecdir}/ceph/ceph_common.sh
 %attr(755,root,root) %{_libexecdir}/ceph/ceph-osd-prestart.sh
-%attr(755,root,root) %{_libdir}/ceph/ceph-monstore-update-crush.sh
 %{_libdir}/ceph/mgr
 %dir %{_libdir}/ceph/compressor
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_lz4.so*
@@ -538,12 +520,10 @@ fi
 %{_mandir}/man8/ceph-clsinfo.8*
 %{_mandir}/man8/ceph-conf.8*
 %{_mandir}/man8/ceph-create-keys.8*
-%{_mandir}/man8/ceph-debugpack.8*
 %{_mandir}/man8/ceph-dencoder.8*
 %{_mandir}/man8/ceph-deploy.8*
 %{_mandir}/man8/ceph-detect-init.8*
 %{_mandir}/man8/ceph-disk.8*
-%{_mandir}/man8/ceph-kvstore-tool.8*
 %{_mandir}/man8/ceph-mds.8*
 %{_mandir}/man8/ceph-mon.8*
 %{_mandir}/man8/ceph-osd.8*
@@ -694,6 +674,44 @@ fi
 %defattr(644,root,root,755)
 %dir %{_prefix}/lib/ocf/resource.d/ceph
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/rbd
+
+%if %{with test}
+%files test
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_bindir}/ceph-client-debug
+%attr(755,root,root) %{_bindir}/ceph-coverage
+%attr(755,root,root) %{_bindir}/ceph-debugpack
+%attr(755,root,root) %{_bindir}/ceph-kvstore-tool
+%attr(755,root,root) %{_bindir}/ceph-monstore-tool
+%attr(755,root,root) %{_bindir}/ceph-osdomap-tool
+%attr(755,root,root) %{_bindir}/ceph_bench_log
+%attr(755,root,root) %{_bindir}/ceph_erasure_code
+%attr(755,root,root) %{_bindir}/ceph_erasure_code_benchmark
+%attr(755,root,root) %{_bindir}/ceph_kvstorebench
+%attr(755,root,root) %{_bindir}/ceph_multi_stress_watch
+%attr(755,root,root) %{_bindir}/ceph_objectstore_bench
+%attr(755,root,root) %{_bindir}/ceph_omapbench
+%attr(755,root,root) %{_bindir}/ceph_perf_local
+%attr(755,root,root) %{_bindir}/ceph_perf_msgr_client
+%attr(755,root,root) %{_bindir}/ceph_perf_msgr_server
+%attr(755,root,root) %{_bindir}/ceph_perf_objectstore
+%attr(755,root,root) %{_bindir}/ceph_psim
+%attr(755,root,root) %{_bindir}/ceph_radosacl
+%attr(755,root,root) %{_bindir}/ceph_rgw_jsonparser
+%attr(755,root,root) %{_bindir}/ceph_rgw_multiparser
+%attr(755,root,root) %{_bindir}/ceph_scratchtool
+%attr(755,root,root) %{_bindir}/ceph_scratchtoolpp
+%attr(755,root,root) %{_bindir}/ceph_smalliobench
+%attr(755,root,root) %{_bindir}/ceph_smalliobenchdumb
+%attr(755,root,root) %{_bindir}/ceph_smalliobenchfs
+%attr(755,root,root) %{_bindir}/ceph_smalliobenchrbd
+%attr(755,root,root) %{_bindir}/ceph_test_*
+%attr(755,root,root) %{_bindir}/ceph_tpbench
+%attr(755,root,root) %{_bindir}/ceph_xattr_bench
+%attr(755,root,root) %{_libdir}/ceph/ceph-monstore-update-crush.sh
+%{_mandir}/man8/ceph-debugpack.8*
+%{_mandir}/man8/ceph-kvstore-tool.8*
+%endif
 
 %if %{with fio}
 %files -n fio-ceph-objectstore
