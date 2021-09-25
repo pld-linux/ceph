@@ -35,7 +35,7 @@ Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	12.2.13
-Release:	8
+Release:	9
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
@@ -69,6 +69,7 @@ BuildRequires:	expat-devel >= 1.95
 BuildRequires:	gdbm-devel
 %if %{with java}
 BuildRequires:	jdk
+BuildRequires:	jre-X11
 %endif
 BuildRequires:	keyutils-devel
 BuildRequires:	leveldb-devel >= 1.2
@@ -308,6 +309,7 @@ cd build
 	-DSPHINX_BUILD=/usr/bin/sphinx-build-2 \
 	%{!?with_babeltrace:-DWITH_BABELTRACE=OFF} \
 	%{?with_java:-DWITH_CEPHFS_JAVA=ON} \
+	%{?with_java:-DJAVA_JVM_LIBRARY:PATH=%{_jvmdir}/java/lib/server/libjvm.so} \
 	%{?with_dpdk:-DWITH_DPDK=ON} \
 	%{?with_fio:-DWITH_FIO=ON} \
 	%{!?with_lttng:-DWITH_LTTNG=OFF} \
@@ -648,7 +650,6 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/libcephfs_jni.so.1
 %attr(755,root,root) %{_libdir}/libcephfs_jni.so
 %{_javadir}/libcephfs.jar
-%{_javadir}/libcephfs-test.jar
 %endif
 
 %files fuse
