@@ -2,12 +2,15 @@
 # - proper init scripts if non-systemd boot is too be supported
 #   (upstream scripts seem overcomplicated and hardly useful)
 # - run as non-root user
+# - build selinux policy (-DWITH_SELINUX=ON)
+# - package sphinx docs (from doc/)
 #
 # Note on versioning: http://docs.ceph.com/docs/master/releases/
 #
 # Conditional build:
 %bcond_without	java		# Java binding
 %bcond_with	accelio		# Accelio transport support [needs update for internal API changes]
+%bcond_with	angular		# Angular-based mgr/dashboard frontend (built using npm, too outdated currently)
 %bcond_with	cryptopp	# use cryptopp instead of NSS crypto/SSL
 %bcond_with	dpdk		# DPDK messaging (requires cryptopp instead of nss)
 %bcond_without	fcgi		# RADOS Gateway FCGI frontend
@@ -34,12 +37,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	12.2.13
-Release:	7
+Version:	13.2.10
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	38bd01cf8224c9ca081298e19ab6e5a1
+# Source0-md5:	4dfcd8bf2cbbc90ac3bc70cbb2992fa9
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-init-fix.patch
@@ -81,13 +84,14 @@ BuildRequires:	libfuse-devel
 %{?with_accelio:BuildRequires:	libibverbs-devel}
 BuildRequires:	libltdl-devel
 %{?with_accelio:BuildRequires:	librdmacm-devel}
-BuildRequires:	libstdc++-devel >= 6:4.7
+BuildRequires:	libstdc++-devel >= 6:7
 %{?with_tcmalloc:BuildRequires:	libtcmalloc-devel}
 BuildRequires:	libtool >= 2:1.5
 BuildRequires:	libuuid-devel
 BuildRequires:	libxml2-devel >= 2.0
 %{?with_lttng:BuildRequires:	lttng-ust-devel}
 BuildRequires:	lz4-devel >= 1:1.7
+%{?with_angular:BuildRequires:	npm}
 %{!?with_cryptopp:BuildRequires:	nss-devel >= 3}
 BuildRequires:	openldap-devel
 BuildRequires:	openssl-devel
@@ -159,7 +163,7 @@ Requires:	nss-devel >= 3
 Requires:	leveldb-devel
 Requires:	libatomic_ops
 Requires:	libblkid-devel >= 2.17
-Requires:	libstdc++-devel >= 6:4.7
+Requires:	libstdc++-devel >= 6:7
 Requires:	libuuid-devel
 %{?with_lttng:Requires:	lttng-ust-devel}
 Requires:	openldap-devel
@@ -294,9 +298,24 @@ uruchamiania demonów.
 %patch10 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env python$,%{__python},' \
-	src/{ceph-create-keys,ceph-rest-api,mount.fuse.ceph} \
-	src/brag/client/ceph-brag \
+	src/{ceph-create-keys,mount.fuse.ceph} \
 	src/ceph-disk/ceph_disk/main.py
+
+%{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
+	src/{ceph-post-file.in,rbd-replay-many,rbdmap}
+
+%if %{with angular}
+# stub virtualenv with npm for src/pybind/mgr/dashboard bootstrapping
+install -d build/src/pybind/mgr/dashboard/node-env/bin
+ln -sf /usr/bin/npm build/src/pybind/mgr/dashboard/node-env/bin/npm
+cat >build/src/pybind/mgr/dashboard/node-env/bin/activate <<EOF
+deactivate() {
+    unset -f deactivate
+}
+EOF
+# 4.11.0 no longer downloadable, adjust to nearest existing
+%{__sed} -i -e '/"node-sass"/ s/4\.11\.0/4.13.1/' src/pybind/mgr/dashboard/frontend/package-lock.json
+%endif
 
 %build
 install -d build
@@ -312,6 +331,7 @@ cd build
 	%{?with_fio:-DWITH_FIO=ON} \
 	%{!?with_lttng:-DWITH_LTTNG=OFF} \
 	-DWITH_LZ4=ON \
+	%{!?with_angular:-DWITH_MGR_DASHBOARD_FRONTEND=OFF} \
 	%{?with_cryptopp:-DWITH_NSS=OFF} \
 	-DWITH_OCF=ON \
 	%{?with_pmem:-DWITH_PMEM=ON} \
@@ -324,6 +344,13 @@ cd build
 	%{?with_zfs:-DWITH_ZFS=ON} \
 	-DWITH_REENTRANT_STRSIGNAL=ON \
 	%{!?with_tests:-DWITH_TESTS=OFF}
+#	-DWITH_MANPAGE=ON \
+#	-DWITH_PYTHON2=ON \
+#	-DWITH_PYTHON3=ON \
+
+# required by xfs headers (for off64_t)
+#CPPFLAGS="%{rpmcppflags} -D_FILE_OFFSET_BITS=64"
+
 
 %{__make}
 
@@ -361,7 +388,10 @@ cp -p %{SOURCE3} $RPM_BUILD_ROOT%{systemdtmpfilesdir}/ceph.conf
 # packaged as %doc
 %{__rm} $RPM_BUILD_ROOT%{_docdir}/sample.ceph.conf
 # cleanup
-%{__rm} $RPM_BUILD_ROOT%{_libdir}/ceph/mgr/{.gitignore,dashboard/HACKING.rst,dashboard/static/AdminLTE-2.3.7/{.gitignore,.jshintrc,README.md}}
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/ceph/mgr/dashboard/HACKING.rst
+%if %{with angular}
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/ceph/mgr/{.gitignore,dashboard/static/AdminLTE-2.3.7/{.gitignore,.jshintrc,README.md}}
+%endif
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -392,12 +422,13 @@ fi
 %files
 %defattr(644,root,root,755)
 # COPYING specifies licenses of individual parts
-%doc AUTHORS COPYING PendingReleaseNotes README.md src/sample.ceph.conf doc/{release-notes,releases}.rst
+%doc AUTHORS COPYING PendingReleaseNotes README.md src/sample.ceph.conf doc/releases
 %attr(754,root,root) /etc/rc.d/init.d/ceph
 %config(noreplace) /etc/sysconfig/ceph
 %dir /etc/systemd/system/ceph.target.wants
 %{systemdunitdir}/ceph.service
 %{systemdunitdir}/ceph.target
+%{systemdunitdir}/ceph-crash.service
 %{systemdunitdir}/ceph-disk@.service
 %{systemdunitdir}/ceph-fuse.target
 %{systemdunitdir}/ceph-fuse@.service
@@ -418,20 +449,21 @@ fi
 %attr(755,root,root) %{_bindir}/ceph
 %attr(755,root,root) %{_bindir}/ceph-authtool
 %attr(755,root,root) %{_bindir}/ceph-bluestore-tool
-%attr(755,root,root) %{_bindir}/ceph-brag
 %attr(755,root,root) %{_bindir}/ceph-clsinfo
 %attr(755,root,root) %{_bindir}/ceph-conf
-%attr(755,root,root) %{_bindir}/ceph-crush-location
+%attr(755,root,root) %{_bindir}/ceph-crash
 %attr(755,root,root) %{_bindir}/ceph-dencoder
 %attr(755,root,root) %{_bindir}/ceph-detect-init
+%attr(755,root,root) %{_bindir}/ceph-kvstore-tool
 %attr(755,root,root) %{_bindir}/ceph-mds
 %attr(755,root,root) %{_bindir}/ceph-mgr
 %attr(755,root,root) %{_bindir}/ceph-mon
+%attr(755,root,root) %{_bindir}/ceph-monstore-tool
 %attr(755,root,root) %{_bindir}/ceph-objectstore-tool
 %attr(755,root,root) %{_bindir}/ceph-osd
+%attr(755,root,root) %{_bindir}/ceph-osdomap-tool
 %attr(755,root,root) %{_bindir}/ceph-post-file
 %attr(755,root,root) %{_bindir}/ceph-rbdnamer
-%attr(755,root,root) %{_bindir}/ceph-rest-api
 %attr(755,root,root) %{_bindir}/ceph-run
 %attr(755,root,root) %{_bindir}/ceph-syn
 %attr(755,root,root) %{_bindir}/cephfs-data-scan
@@ -500,6 +532,7 @@ fi
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_log.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_lua.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_numops.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_otp.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rbd.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_refcount.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_replica_log.so*
@@ -524,12 +557,12 @@ fi
 %{_mandir}/man8/ceph-deploy.8*
 %{_mandir}/man8/ceph-detect-init.8*
 %{_mandir}/man8/ceph-disk.8*
+%{_mandir}/man8/ceph-kvstore-tool.8*
 %{_mandir}/man8/ceph-mds.8*
 %{_mandir}/man8/ceph-mon.8*
 %{_mandir}/man8/ceph-osd.8*
 %{_mandir}/man8/ceph-post-file.8*
 %{_mandir}/man8/ceph-rbdnamer.8*
-%{_mandir}/man8/ceph-rest-api.8*
 %{_mandir}/man8/ceph-run.8*
 %{_mandir}/man8/ceph-syn.8*
 %{_mandir}/man8/ceph-volume.8*
@@ -583,6 +616,10 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librbd_tp.so.1
 %attr(755,root,root) %{_libdir}/librgw.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librgw.so.2
+%attr(755,root,root) %{_libdir}/librgw_op_tp.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/librgw_op_tp.so.1
+%attr(755,root,root) %{_libdir}/librgw_rados_tp.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/librgw_rados_tp.so.1
 %dir %{_libdir}/ceph
 %attr(755,root,root) %{_libdir}/ceph/libceph-common.so.0
 
@@ -597,6 +634,8 @@ fi
 %attr(755,root,root) %{_libdir}/librbd.so
 %attr(755,root,root) %{_libdir}/librbd_tp.so
 %attr(755,root,root) %{_libdir}/librgw.so
+%attr(755,root,root) %{_libdir}/librgw_op_tp.so
+%attr(755,root,root) %{_libdir}/librgw_rados_tp.so
 %attr(755,root,root) %{_libdir}/ceph/libceph-common.so
 %{_includedir}/cephfs
 %{_includedir}/rados
@@ -621,9 +660,9 @@ fi
 %{py_sitedir}/rgw-2.0.0-py*.egg-info
 %{py_sitescriptdir}/ceph_argparse.py[co]
 %{py_sitescriptdir}/ceph_daemon.py[co]
-%{py_sitescriptdir}/ceph_rest_api.py[co]
 %{py_sitescriptdir}/ceph_volume_client.py[co]
 
+%if 0
 %files -n python3-ceph
 %defattr(644,root,root,755)
 %attr(755,root,root) %{py3_sitedir}/cephfs.cpython-*.so
@@ -640,6 +679,7 @@ fi
 %{py3_sitescriptdir}/__pycache__/ceph_argparse.cpython-*.py[co]
 %{py3_sitescriptdir}/__pycache__/ceph_daemon.cpython-*.py[co]
 %{py3_sitescriptdir}/__pycache__/ceph_volume_client.cpython-*.py[co]
+%endif
 
 %if %{with java}
 %files -n java-cephfs
