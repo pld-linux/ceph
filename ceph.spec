@@ -95,8 +95,8 @@ BuildRequires:	openssl-devel
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 %{?with_pmem:BuildRequires:	pmdk-devel}
-BuildRequires:	python3 >= 1:2.7
-BuildRequires:	python3-devel >= 1:2.7
+BuildRequires:	python3 >= 1:3.2
+BuildRequires:	python3-devel >= 1:3.2
 BuildRequires:	python3-tox >= 2.9.1
 BuildRequires:	python3-Cython
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.6.0}
