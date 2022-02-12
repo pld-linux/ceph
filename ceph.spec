@@ -42,16 +42,12 @@ Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
 # Source0-md5:	3cb3d259e59920b0d7145537f338aeec
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
-Patch0:		%{name}-init-fix.patch
-Patch3:		%{name}-python.patch
-Patch4:		%{name}-types.patch
-Patch5:		%{name}-tcmalloc.patch
-Patch6:		%{name}-rocksdb.patch
-Patch7:		%{name}-fcgi.patch
-Patch8:		%{name}-fio.patch
-Patch9:		%{name}-zfs.patch
-Patch10:	%{name}-includes.patch
-Patch11:	string-includes.patch
+Patch0:		%{name}-python.patch
+Patch1:		%{name}-tcmalloc.patch
+Patch2:		%{name}-fcgi.patch
+Patch3:		string-includes.patch
+Patch4:		no-virtualenvs.patch
+Patch5:		system-zstd.patch
 URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -101,23 +97,19 @@ BuildRequires:	pkgconfig
 %{?with_pmem:BuildRequires:	pmdk-devel}
 BuildRequires:	python3 >= 1:2.7
 BuildRequires:	python3-devel >= 1:2.7
+BuildRequires:	python3-tox >= 2.9.1
 BuildRequires:	python3-Cython
-BuildRequires:	python3-devel >= 1:3.2
-BuildRequires:	python3-Cython
-# upstream uses 3.0.0, rocksdb patch adjusts for 5.6.0 API change
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.6.0}
 BuildRequires:	rpmbuild(macros) >= 1.671
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
-BuildRequires:	sphinx-pdg-2 >= 1.0
+BuildRequires:	sphinx-pdg >= 3.0
 BuildRequires:	udev-devel
-#BuildRequires:	virtualenv  for tests
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
 BuildRequires:	xfsprogs-devel
 %ifarch %{x8664}
 BuildRequires:	yasm
 %endif
-# zfs patch updates to 0.8.0 API
 %{?with_zfs:BuildRequires:	zfs-devel >= 0.8.0}
 BuildRequires:	zlib-devel
 Requires(post,preun):	/sbin/chkconfig
@@ -276,15 +268,11 @@ uruchamiania demonów.
 %prep
 %setup -q
 %patch0 -p1
-#%patch3 -p1
-#%patch4 -p1
-#%patch5 -p1
-#%patch6 -p1
-%patch7 -p1
-#%patch8 -p1
-#%patch9 -p1
-#%patch10 -p1
-%patch11 -p1
+#patch1 -p1
+%patch2 -p1
+%patch3 -p1
+%patch4 -p1
+%patch5 -p1
 
 #%{__sed} -i -e '1s,/usr/bin/env python$,%{__python},' \
 #	src/{ceph-create-keys,ceph-rest-api,mount.fuse.ceph} \
@@ -299,7 +287,7 @@ cd build
 	-DFIO_INCLUDE_DIR=/usr/include/fio \
 	-DWITH_PYTHON3=%{py3_ver} \
 	-DPYTHON=%{__python3} \
-	-DSPHINX_BUILD=/usr/bin/sphinx-build-2 \
+	-DSPHINX_BUILD=/usr/bin/sphinx-build \
 	%{!?with_babeltrace:-DWITH_BABELTRACE=OFF} \
 	%{?with_java:-DWITH_CEPHFS_JAVA=ON} \
 	%{?with_java:-DJAVA_JVM_LIBRARY:PATH=%{_jvmdir}/java/lib/server/libjvm.so} \
@@ -312,6 +300,7 @@ cd build
 	-DWITH_OCF=ON \
 	%{?with_pmem:-DWITH_PMEM=ON} \
 	%{?with_fcgi:-DWITH_RADOSGW_FCGI_FRONTEND=ON} \
+	-DWITH_MGR_DASHBOARD_FRONTEND=OFF \
 	%{?with_spdk:-DWITH_SPDK=ON} \
 	-DWITH_SYSTEM_BOOST=ON \
 	%{?with_system_rocksdb:-DWITH_SYSTEM_ROCKSDB=ON} \
@@ -321,7 +310,7 @@ cd build
 	-DWITH_REENTRANT_STRSIGNAL=ON \
 	%{!?with_tests:-DWITH_TESTS=OFF}
 
-%{__make} -k
+%{__make}
 
 %install
 rm -rf $RPM_BUILD_ROOT

@@ -1,7 +1,22 @@
---- ceph-12.2.13/cmake/modules/Distutils.cmake.orig	2020-01-30 21:52:36.000000000 +0100
-+++ ceph-12.2.13/cmake/modules/Distutils.cmake	2020-05-29 22:15:43.919231143 +0200
-@@ -17,10 +17,7 @@
+--- ceph-16.2.7/cmake/modules/Distutils.cmake~	2021-12-07 17:15:49.000000000 +0100
++++ ceph-16.2.7/cmake/modules/Distutils.cmake	2022-02-12 11:15:17.620439748 +0100
+@@ -19,12 +19,10 @@
    install(CODE "
+     set(options --prefix=${CMAKE_INSTALL_PREFIX})
+     if(DEFINED ENV{DESTDIR})
+-      if(EXISTS /etc/debian_version)
+-        list(APPEND options --install-layout=deb)
+-      endif()
+       list(APPEND options
+         --root=\$ENV{DESTDIR}
+-        --single-version-externally-managed)
++        --single-version-externally-managed
++	--optimize=2)
+     endif()
+     if(NOT \"${DU_INSTALL_SCRIPT}\" STREQUAL \"\")
+       list(APPEND options --install-script=${DU_INSTALL_SCRIPT})
+@@ -109,10 +107,7 @@
+ 
      set(options --prefix=${CMAKE_INSTALL_PREFIX})
      if(DEFINED ENV{DESTDIR})
 -      if(EXISTS /etc/debian_version)
@@ -9,6 +24,6 @@
 -      endif()
 -      list(APPEND options --root=\$ENV{DESTDIR})
 +      list(APPEND options --root=\$ENV{DESTDIR} --optimize=2)
-       if(NOT \"${DU_INSTALL_SCRIPT}\" STREQUAL \"\")
-         list(APPEND options --install-script=${DU_INSTALL_SCRIPT})
-       endif()
+     else()
+       list(APPEND options --root=/)
+     endif()
