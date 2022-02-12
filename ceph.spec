@@ -332,21 +332,14 @@ cp -p %{SOURCE1} $RPM_BUILD_ROOT/etc/sysconfig/ceph
 ln -sf /dev/null $RPM_BUILD_ROOT%{systemdunitdir}/ceph.service
 cp -p %{SOURCE3} $RPM_BUILD_ROOT%{systemdtmpfilesdir}/ceph.conf
 
-%py_comp $RPM_BUILD_ROOT%{py_sitescriptdir}
-%py_ocomp $RPM_BUILD_ROOT%{py_sitescriptdir}
-%py_postclean
-
 %py3_comp $RPM_BUILD_ROOT%{py3_sitescriptdir}
 %py3_ocomp $RPM_BUILD_ROOT%{py3_sitescriptdir}
 
-%if %{with tests}
-# tests
-%{__rm} $RPM_BUILD_ROOT%{_bindir}/ceph_test_*
-%endif
 # packaged as %doc
 %{__rm} $RPM_BUILD_ROOT%{_docdir}/sample.ceph.conf
-# cleanup
-%{__rm} $RPM_BUILD_ROOT%{_libdir}/ceph/mgr/{.gitignore,dashboard/HACKING.rst,dashboard/static/AdminLTE-2.3.7/{.gitignore,.jshintrc,README.md}}
+
+%{__sed} -E -i -e '1s,#!\s*/usr/bin/env\s+bash(\s|$),#!/bin/bash\1,' \
+	$RPM_BUILD_ROOT%{_bindir}/{ceph-post-file,rbd-replay-many,rbdmap,rgw-gap-list,rgw-orphan-list}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -377,15 +370,19 @@ fi
 %files
 %defattr(644,root,root,755)
 # COPYING specifies licenses of individual parts
-%doc AUTHORS COPYING PendingReleaseNotes README.md src/sample.ceph.conf doc/{release-notes,releases}.rst
+%doc AUTHORS COPYING PendingReleaseNotes README.md src/sample.ceph.conf
 %attr(754,root,root) /etc/rc.d/init.d/ceph
 %config(noreplace) /etc/sysconfig/ceph
 %dir /etc/systemd/system/ceph.target.wants
 %{systemdunitdir}/ceph.service
 %{systemdunitdir}/ceph.target
-%{systemdunitdir}/ceph-disk@.service
+%{systemdunitdir}/ceph-crash.service
+%{systemdunitdir}/cephfs-mirror.target
+%{systemdunitdir}/cephfs-mirror@.service
 %{systemdunitdir}/ceph-fuse.target
 %{systemdunitdir}/ceph-fuse@.service
+%{systemdunitdir}/ceph-immutable-object-cache.target
+%{systemdunitdir}/ceph-immutable-object-cache@.service
 %{systemdunitdir}/ceph-mds.target
 %{systemdunitdir}/ceph-mds@.service
 %{systemdunitdir}/ceph-mgr.target
@@ -403,25 +400,30 @@ fi
 %attr(755,root,root) %{_bindir}/ceph
 %attr(755,root,root) %{_bindir}/ceph-authtool
 %attr(755,root,root) %{_bindir}/ceph-bluestore-tool
-%attr(755,root,root) %{_bindir}/ceph-brag
 %attr(755,root,root) %{_bindir}/ceph-clsinfo
 %attr(755,root,root) %{_bindir}/ceph-conf
-%attr(755,root,root) %{_bindir}/ceph-crush-location
+%attr(755,root,root) %{_bindir}/ceph-crash
 %attr(755,root,root) %{_bindir}/ceph-dencoder
-%attr(755,root,root) %{_bindir}/ceph-detect-init
+%attr(755,root,root) %{_bindir}/ceph-diff-sorted
+%attr(755,root,root) %{_bindir}/ceph-erasure-code-tool
+%attr(755,root,root) %{_bindir}/cephfs-data-scan
+%attr(755,root,root) %{_bindir}/cephfs-journal-tool
+%attr(755,root,root) %{_bindir}/cephfs-mirror
+%attr(755,root,root) %{_bindir}/cephfs-table-tool
+%attr(755,root,root) %{_bindir}/cephfs-top
+%attr(755,root,root) %{_bindir}/ceph-immutable-object-cache
+%attr(755,root,root) %{_bindir}/ceph-kvstore-tool
 %attr(755,root,root) %{_bindir}/ceph-mds
 %attr(755,root,root) %{_bindir}/ceph-mgr
 %attr(755,root,root) %{_bindir}/ceph-mon
+%attr(755,root,root) %{_bindir}/ceph-monstore-tool
 %attr(755,root,root) %{_bindir}/ceph-objectstore-tool
 %attr(755,root,root) %{_bindir}/ceph-osd
+%attr(755,root,root) %{_bindir}/ceph-osdomap-tool
 %attr(755,root,root) %{_bindir}/ceph-post-file
 %attr(755,root,root) %{_bindir}/ceph-rbdnamer
-%attr(755,root,root) %{_bindir}/ceph-rest-api
 %attr(755,root,root) %{_bindir}/ceph-run
 %attr(755,root,root) %{_bindir}/ceph-syn
-%attr(755,root,root) %{_bindir}/cephfs-data-scan
-%attr(755,root,root) %{_bindir}/cephfs-journal-tool
-%attr(755,root,root) %{_bindir}/cephfs-table-tool
 %attr(755,root,root) %{_bindir}/crushtool
 %attr(755,root,root) %{_bindir}/librados-config
 %attr(755,root,root) %{_bindir}/monmaptool
@@ -429,14 +431,16 @@ fi
 %attr(755,root,root) %{_bindir}/rados
 %attr(755,root,root) %{_bindir}/rbd
 %attr(755,root,root) %{_bindir}/rbd-fuse
+%attr(755,root,root) %{_bindir}/rbdmap
 %attr(755,root,root) %{_bindir}/rbd-mirror
 %attr(755,root,root) %{_bindir}/rbd-nbd
 %attr(755,root,root) %{_bindir}/rbd-replay
 %attr(755,root,root) %{_bindir}/rbd-replay-many
 %attr(755,root,root) %{_bindir}/rbd-replay-prep
-%attr(755,root,root) %{_bindir}/rbdmap
+%attr(755,root,root) %{_bindir}/rgw-gap-list
+%attr(755,root,root) %{_bindir}/rgw-gap-list-comparator
+%attr(755,root,root) %{_bindir}/rgw-orphan-list
 %attr(755,root,root) %{_sbindir}/ceph-create-keys
-%attr(755,root,root) %{_sbindir}/ceph-disk
 %attr(755,root,root) %{_sbindir}/ceph-volume
 %attr(755,root,root) %{_sbindir}/ceph-volume-systemd
 %attr(755,root,root) /sbin/mount.ceph
@@ -446,17 +450,18 @@ fi
 %endif
 %{_libexecdir}/ceph/ceph_common.sh
 %attr(755,root,root) %{_libexecdir}/ceph/ceph-osd-prestart.sh
-%{_libdir}/ceph/mgr
 %dir %{_libdir}/ceph/compressor
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_lz4.so*
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_snappy.so*
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_zlib.so*
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_zstd.so*
-%ifarch %{x8664}
 %dir %{_libdir}/ceph/crypto
+%attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_openssl.so*
+%ifarch %{x8664}
 %attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_isal.so*
 %endif
 %dir %{_libdir}/ceph/erasure-code
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_clay.so*
 %ifarch %{x8664}
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_isa.so*
 %endif
@@ -468,16 +473,20 @@ fi
 %ifarch %{ix86} %{x8664} x32
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse3.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse4.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_sse3.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_sse4.so*
 %endif
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_lrc.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_generic.so*
-%ifarch %{ix86} %{x8664} x32
-%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_sse3.so*
-%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_sse4.so*
-%endif
+%dir %{_libdir}/ceph/librbd
+%attr(755,root,root) %{_libdir}/ceph/librbd/libceph_librbd_parent_cache.so*
 %dir %{_libdir}/rados-classes
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_2pc_queue.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_cas.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_cephfs.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_cmpomap.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_fifo.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_hello.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_journal.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
@@ -485,12 +494,13 @@ fi
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_log.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_lua.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_numops.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_otp.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_queue.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rbd.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_refcount.so*
-%attr(755,root,root) %{_libdir}/rados-classes/libcls_replica_log.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw_gc.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_sdk.so*
-%attr(755,root,root) %{_libdir}/rados-classes/libcls_statelog.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_timeindex.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_user.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_version.so*
@@ -500,6 +510,7 @@ fi
 %config(noreplace) %{_sysconfdir}/bash_completion.d/ceph
 %config(noreplace) %{_sysconfdir}/bash_completion.d/rbd
 %{_mandir}/man8/ceph.8*
+%{_mandir}/man8/cephadm.8*
 %{_mandir}/man8/ceph-authtool.8*
 %{_mandir}/man8/ceph-bluestore-tool.8*
 %{_mandir}/man8/ceph-clsinfo.8*
@@ -507,14 +518,16 @@ fi
 %{_mandir}/man8/ceph-create-keys.8*
 %{_mandir}/man8/ceph-dencoder.8*
 %{_mandir}/man8/ceph-deploy.8*
-%{_mandir}/man8/ceph-detect-init.8*
-%{_mandir}/man8/ceph-disk.8*
+%{_mandir}/man8/ceph-diff-sorted.8*
+%{_mandir}/man8/cephfs-mirror.8*
+%{_mandir}/man8/cephfs-top.8*
+%{_mandir}/man8/ceph-immutable-object-cache.8*
+%{_mandir}/man8/ceph-kvstore-tool.8*
 %{_mandir}/man8/ceph-mds.8*
 %{_mandir}/man8/ceph-mon.8*
 %{_mandir}/man8/ceph-osd.8*
 %{_mandir}/man8/ceph-post-file.8*
 %{_mandir}/man8/ceph-rbdnamer.8*
-%{_mandir}/man8/ceph-rest-api.8*
 %{_mandir}/man8/ceph-run.8*
 %{_mandir}/man8/ceph-syn.8*
 %{_mandir}/man8/ceph-volume.8*
@@ -523,16 +536,18 @@ fi
 %{_mandir}/man8/librados-config.8*
 %{_mandir}/man8/monmaptool.8*
 %{_mandir}/man8/mount.ceph.8*
+%{_mandir}/man8/mount.fuse.ceph.8*
 %{_mandir}/man8/osdmaptool.8*
 %{_mandir}/man8/rados.8*
 %{_mandir}/man8/rbd.8*
 %{_mandir}/man8/rbd-fuse.8*
+%{_mandir}/man8/rbdmap.8*
 %{_mandir}/man8/rbd-mirror.8*
 %{_mandir}/man8/rbd-nbd.8*
 %{_mandir}/man8/rbd-replay.8*
 %{_mandir}/man8/rbd-replay-many.8*
 %{_mandir}/man8/rbd-replay-prep.8*
-%{_mandir}/man8/rbdmap.8*
+%{_mandir}/man8/rgw-orphan-list.8*
 
 %dir %{_localstatedir}/lib/ceph
 %dir %{_localstatedir}/lib/ceph/bootstrap-mds
@@ -560,6 +575,8 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librados.so.2
 %attr(755,root,root) %{_libdir}/librados_tp.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librados_tp.so.2
+%attr(755,root,root) %{_libdir}/libradosgw.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libradosgw.so.2
 %attr(755,root,root) %{_libdir}/libradosstriper.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libradosstriper.so.1
 %attr(755,root,root) %{_libdir}/librbd.so.*.*.*
@@ -568,8 +585,13 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librbd_tp.so.1
 %attr(755,root,root) %{_libdir}/librgw.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librgw.so.2
+%attr(755,root,root) %{_libdir}/librgw_op_tp.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/librgw_op_tp.so.2
+%attr(755,root,root) %{_libdir}/librgw_rados_tp.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/librgw_rados_tp.so.2
+%attr(755,root,root) %{_libdir}/libcephsqlite.so
 %dir %{_libdir}/ceph
-%attr(755,root,root) %{_libdir}/ceph/libceph-common.so.0
+%attr(755,root,root) %{_libdir}/ceph/libceph-common.so.2
 
 %files devel
 %defattr(644,root,root,755)
@@ -578,25 +600,33 @@ fi
 %attr(755,root,root) %{_libdir}/libosd_tp.so
 %attr(755,root,root) %{_libdir}/librados.so
 %attr(755,root,root) %{_libdir}/librados_tp.so
+%attr(755,root,root) %{_libdir}/libradosgw.so
 %attr(755,root,root) %{_libdir}/libradosstriper.so
 %attr(755,root,root) %{_libdir}/librbd.so
 %attr(755,root,root) %{_libdir}/librbd_tp.so
 %attr(755,root,root) %{_libdir}/librgw.so
-%attr(755,root,root) %{_libdir}/ceph/libceph-common.so
+%attr(755,root,root) %{_libdir}/librgw_op_tp.so
+%attr(755,root,root) %{_libdir}/librgw_rados_tp.so
 %{_includedir}/cephfs
 %{_includedir}/rados
 %{_includedir}/radosstriper
 %{_includedir}/rbd
+%{_includedir}/libcephsqlite.h
 
 %files -n python3-ceph
 %defattr(644,root,root,755)
+%{py3_sitedir}/ceph
+%{py3_sitedir}/ceph-1.0.0-py*.egg-info
 %attr(755,root,root) %{py3_sitedir}/cephfs.cpython-*.so
-%attr(755,root,root) %{py3_sitedir}/rados.cpython-*.so
-%attr(755,root,root) %{py3_sitedir}/rbd.cpython-*.so
-%attr(755,root,root) %{py3_sitedir}/rgw.cpython-*.so
 %{py3_sitedir}/cephfs-2.0.0-py*.egg-info
+%{py3_sitedir}/cephfs_top-0.0.1-py*.egg-info
+%{py3_sitedir}/ceph_volume
+%{py3_sitedir}/ceph_volume-1.0.0-py*.egg-info
+%attr(755,root,root) %{py3_sitedir}/rados.cpython-*.so
 %{py3_sitedir}/rados-2.0.0-py*.egg-info
+%attr(755,root,root) %{py3_sitedir}/rbd.cpython-*.so
 %{py3_sitedir}/rbd-2.0.0-py*.egg-info
+%attr(755,root,root) %{py3_sitedir}/rgw.cpython-*.so
 %{py3_sitedir}/rgw-2.0.0-py*.egg-info
 %{py3_sitescriptdir}/ceph_argparse.py
 %{py3_sitescriptdir}/ceph_daemon.py
@@ -604,6 +634,10 @@ fi
 %{py3_sitescriptdir}/__pycache__/ceph_argparse.cpython-*.py[co]
 %{py3_sitescriptdir}/__pycache__/ceph_daemon.cpython-*.py[co]
 %{py3_sitescriptdir}/__pycache__/ceph_volume_client.cpython-*.py[co]
+%if %{without tests}
+%exclude %{py3_sitedir}/ceph/tests
+%exclude %{py3_sitedir}/ceph_volume/tests
+%endif
 
 %if %{with java}
 %files -n java-cephfs
@@ -638,7 +672,7 @@ fi
 %dir %{_prefix}/lib/ocf/resource.d/ceph
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/rbd
 
-%if %{with test}
+%if %{with tests}
 %files test
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_bindir}/ceph-client-debug
