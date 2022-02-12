@@ -10,12 +10,12 @@
 %bcond_with	accelio		# Accelio transport support [needs update for internal API changes]
 %bcond_with	cryptopp	# use cryptopp instead of NSS crypto/SSL
 %bcond_with	dpdk		# DPDK messaging (requires cryptopp instead of nss)
-%bcond_without	fcgi		# RADOS Gateway FCGI frontend
+%bcond_with	fcgi		# RADOS Gateway FCGI frontend
 %bcond_with	fio		# FIO engines support
 %bcond_without	pmem		# PMDK (persistent memory) support
 %bcond_with	spdk		# Ceph SPDK support (DPDK based)
 %bcond_without	system_rocksdb	# system RocksDB storage support
-%bcond_without	zfs		# ZFS support [not ready for zfs 0.8.x]
+%bcond_with	zfs		# ZFS support [not ready for zfs 0.8.x]
 %bcond_without	lttng		# LTTng tracing
 %bcond_without	babeltrace	# Babeltrace traces support
 %bcond_without	tcmalloc	# tcmalloc allocator
@@ -34,16 +34,15 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	12.2.13
-Release:	10
+Version:	16.2.7
+Release:	0.1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	38bd01cf8224c9ca081298e19ab6e5a1
+# Source0-md5:	3cb3d259e59920b0d7145537f338aeec
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-init-fix.patch
-Patch2:		boost.patch
 Patch3:		%{name}-python.patch
 Patch4:		%{name}-types.patch
 Patch5:		%{name}-tcmalloc.patch
@@ -52,12 +51,13 @@ Patch7:		%{name}-fcgi.patch
 Patch8:		%{name}-fio.patch
 Patch9:		%{name}-zfs.patch
 Patch10:	%{name}-includes.patch
+Patch11:	string-includes.patch
 URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
 BuildRequires:	boost-devel >= 1.66
-BuildRequires:	boost-python-devel >= 1.66
-BuildRequires:	cmake >= 2.8.11
+BuildRequires:	boost-python3-devel >= 1.66
+BuildRequires:	cmake >= 3.22.2
 %{?with_cryptopp:BuildRequires:	cryptopp-devel}
 BuildRequires:	curl-devel
 %if %{with dpdk} || %{with spdk}
@@ -67,6 +67,7 @@ BuildRequires:	expat-devel >= 1.95
 %{?with_fcgi:BuildRequires:	fcgi-devel}
 %{?with_fio:BuildRequires:	fio-devel}
 BuildRequires:	gdbm-devel
+BuildRequires:	gperftools-devel
 %if %{with java}
 BuildRequires:	jdk
 BuildRequires:	jre-X11
@@ -81,6 +82,7 @@ BuildRequires:	libfuse-devel
 # +RDMA?
 %{?with_accelio:BuildRequires:	libibverbs-devel}
 BuildRequires:	libltdl-devel
+BuildRequires:	librdkafka-devel
 %{?with_accelio:BuildRequires:	librdmacm-devel}
 BuildRequires:	libstdc++-devel >= 6:4.7
 %{?with_tcmalloc:BuildRequires:	libtcmalloc-devel}
@@ -88,16 +90,18 @@ BuildRequires:	libtool >= 2:1.5
 BuildRequires:	libuuid-devel
 BuildRequires:	libxml2-devel >= 2.0
 %{?with_lttng:BuildRequires:	lttng-ust-devel}
+BuildRequires:	lua-devel
 BuildRequires:	lz4-devel >= 1:1.7
 %{!?with_cryptopp:BuildRequires:	nss-devel >= 3}
+BuildRequires:	oath-toolkit-devel
 BuildRequires:	openldap-devel
 BuildRequires:	openssl-devel
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 %{?with_pmem:BuildRequires:	pmdk-devel}
-BuildRequires:	python >= 1:2.7
-BuildRequires:	python-devel >= 1:2.7
-BuildRequires:	python-Cython
+BuildRequires:	python3 >= 1:2.7
+BuildRequires:	python3-devel >= 1:2.7
+BuildRequires:	python3-Cython
 BuildRequires:	python3-devel >= 1:3.2
 BuildRequires:	python3-Cython
 # upstream uses 3.0.0, rocksdb patch adjusts for 5.6.0 API change
@@ -119,7 +123,7 @@ BuildRequires:	zlib-devel
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
-Requires:	python-%{name} = %{version}-%{release}
+Requires:	python3-%{name} = %{version}-%{release}
 Requires:	systemd-units >= 38
 Obsoletes:	gcephtool
 Obsoletes:	hadoop-cephfs
@@ -173,18 +177,6 @@ Ceph.
 %description devel -l pl.UTF-8
 Ten pakiet zawiera pliki nagłówkowe potrzebne do tworzenia programów
 wykorzystujących Cepha.
-
-%package -n python-ceph
-Summary:	Ceph Python 2 bindings
-Summary(pl.UTF-8):	Wiązania Pythona 2 do bibliotek Cepha
-Group:		Development/Languages/Python
-Requires:	%{name}-libs = %{version}-%{release}
-
-%description -n python-ceph
-Ceph Python 2 bindings.
-
-%description -n python-ceph -l pl.UTF-8
-Wiązania Pythona 2 do bibliotek Cepha.
 
 %package -n python3-ceph
 Summary:	Ceph Python 3 bindings
@@ -284,20 +276,20 @@ uruchamiania demonów.
 %prep
 %setup -q
 %patch0 -p1
-%patch2 -p0
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
+#%patch3 -p1
+#%patch4 -p1
+#%patch5 -p1
+#%patch6 -p1
 %patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
+#%patch8 -p1
+#%patch9 -p1
+#%patch10 -p1
+%patch11 -p1
 
-%{__sed} -i -e '1s,/usr/bin/env python$,%{__python},' \
-	src/{ceph-create-keys,ceph-rest-api,mount.fuse.ceph} \
-	src/brag/client/ceph-brag \
-	src/ceph-disk/ceph_disk/main.py
+#%{__sed} -i -e '1s,/usr/bin/env python$,%{__python},' \
+#	src/{ceph-create-keys,ceph-rest-api,mount.fuse.ceph} \
+#	src/brag/client/ceph-brag \
+#	src/ceph-disk/ceph_disk/main.py
 
 %build
 install -d build
@@ -305,7 +297,8 @@ cd build
 %cmake .. \
 	-DALLOCATOR="%{?with_tcmalloc:tcmalloc}%{!?with_tcmalloc:libc}" \
 	-DFIO_INCLUDE_DIR=/usr/include/fio \
-	-DPYTHON=%{__python} \
+	-DWITH_PYTHON3=%{py3_ver} \
+	-DPYTHON=%{__python3} \
 	-DSPHINX_BUILD=/usr/bin/sphinx-build-2 \
 	%{!?with_babeltrace:-DWITH_BABELTRACE=OFF} \
 	%{?with_java:-DWITH_CEPHFS_JAVA=ON} \
@@ -313,6 +306,7 @@ cd build
 	%{?with_dpdk:-DWITH_DPDK=ON} \
 	%{?with_fio:-DWITH_FIO=ON} \
 	%{!?with_lttng:-DWITH_LTTNG=OFF} \
+	-DLUA_INCLUDE_DIR=%{_includedir}/lua \
 	-DWITH_LZ4=ON \
 	%{?with_cryptopp:-DWITH_NSS=OFF} \
 	-DWITH_OCF=ON \
@@ -327,7 +321,7 @@ cd build
 	-DWITH_REENTRANT_STRSIGNAL=ON \
 	%{!?with_tests:-DWITH_TESTS=OFF}
 
-%{__make}
+%{__make} -k
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -604,27 +598,6 @@ fi
 %{_includedir}/rados
 %{_includedir}/radosstriper
 %{_includedir}/rbd
-
-%files -n python-ceph
-%defattr(644,root,root,755)
-%attr(755,root,root) %{py_sitedir}/cephfs.so
-%attr(755,root,root) %{py_sitedir}/rados.so
-%attr(755,root,root) %{py_sitedir}/rbd.so
-%attr(755,root,root) %{py_sitedir}/rgw.so
-%{py_sitedir}/ceph_detect_init
-%{py_sitedir}/ceph_detect_init-1.0.1-py*.egg-info
-%{py_sitedir}/ceph_disk
-%{py_sitedir}/ceph_disk-1.0.0-py*.egg-info
-%{py_sitedir}/ceph_volume
-%{py_sitedir}/ceph_volume-1.0.0-py*.egg-info
-%{py_sitedir}/cephfs-2.0.0-py*.egg-info
-%{py_sitedir}/rados-2.0.0-py*.egg-info
-%{py_sitedir}/rbd-2.0.0-py*.egg-info
-%{py_sitedir}/rgw-2.0.0-py*.egg-info
-%{py_sitescriptdir}/ceph_argparse.py[co]
-%{py_sitescriptdir}/ceph_daemon.py[co]
-%{py_sitescriptdir}/ceph_rest_api.py[co]
-%{py_sitescriptdir}/ceph_volume_client.py[co]
 
 %files -n python3-ceph
 %defattr(644,root,root,755)
