@@ -1,0 +1,30 @@
+--- ceph-16.2.7/src/log/LogClock.h~	2021-12-07 17:15:49.000000000 +0100
++++ ceph-16.2.7/src/log/LogClock.h	2022-02-12 18:57:04.434978131 +0100
+@@ -8,14 +8,11 @@
+ #include <chrono>
+ #include <ctime>
+ #include <sys/time.h>
++#include <sys/types.h>
+ 
+ #include "include/ceph_assert.h"
+ #include "common/ceph_time.h"
+ 
+-#ifndef suseconds_t
+-typedef long suseconds_t;
+-#endif
+-
+ namespace ceph {
+ namespace logging {
+ namespace _logclock {
+   new_back->set_length(0);   // unused, so far.
+--- ceph-16.2.7/src/SimpleRADOSStriper.cc~	2021-12-07 17:15:49.000000000 +0100
++++ ceph-16.2.7/src/SimpleRADOSStriper.cc	2022-02-12 21:59:28.261721940 +0100
+@@ -140,7 +140,7 @@
+   return 0;
+ }
+ 
+-int SimpleRADOSStriper::truncate(uint64_t size)
++int SimpleRADOSStriper::truncate(size_t size)
+ {
+   d(5) << size << dendl;
+ 

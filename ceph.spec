@@ -48,6 +48,8 @@ Patch2:		%{name}-fcgi.patch
 Patch3:		string-includes.patch
 Patch4:		no-virtualenvs.patch
 Patch5:		system-zstd.patch
+Patch6:		types.patch
+Patch7:		x32.patch
 URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -273,11 +275,10 @@ uruchamiania demonów.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
-
-#%{__sed} -i -e '1s,/usr/bin/env python$,%{__python},' \
-#	src/{ceph-create-keys,ceph-rest-api,mount.fuse.ceph} \
-#	src/brag/client/ceph-brag \
-#	src/ceph-disk/ceph_disk/main.py
+%patch6 -p1
+%ifarch x32
+%patch7 -p1
+%endif
 
 %build
 install -d build
