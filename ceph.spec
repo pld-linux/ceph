@@ -280,7 +280,9 @@ uruchamiania demonów.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%ifarch %{ix86}
 %patch9 -p1
+%endif
 
 %build
 install -d build
