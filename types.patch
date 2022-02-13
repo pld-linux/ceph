@@ -16,7 +16,6 @@
  namespace ceph {
  namespace logging {
  namespace _logclock {
-   new_back->set_length(0);   // unused, so far.
 --- ceph-16.2.7/src/SimpleRADOSStriper.cc~	2021-12-07 17:15:49.000000000 +0100
 +++ ceph-16.2.7/src/SimpleRADOSStriper.cc	2022-02-12 21:59:28.261721940 +0100
 @@ -140,7 +140,7 @@
@@ -38,6 +37,7 @@
 +    std::max((size_t)min_alloc, (size_t)((len + CEPH_PAGE_SIZE - 1) & CEPH_PAGE_MASK));
    auto new_back = \
      ptr_node::create(buffer::create_page_aligned(alloc));
+   new_back->set_length(0);   // unused, so far.
 --- ceph-16.2.7/src/os/bluestore/BlueFS.cc~	2021-12-07 17:15:49.000000000 +0100
 +++ ceph-16.2.7/src/os/bluestore/BlueFS.cc	2022-02-12 21:40:54.182516511 +0100
 @@ -3799,7 +3799,7 @@

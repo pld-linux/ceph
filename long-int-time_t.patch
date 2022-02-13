@@ -1,5 +1,5 @@
---- /home/users/baggins/devel/PLD/rpm/BUILD/ceph-16.2.7/src/json_spirit/json_spirit_value.h.orig	2021-12-07 17:15:49.000000000 +0100
-+++ /home/users/baggins/devel/PLD/rpm/BUILD/ceph-16.2.7/src/json_spirit/json_spirit_value.h	2022-02-13 10:26:48.023109513 +0100
+--- ceph-16.2.7/src/json_spirit/json_spirit_value.h.orig	2021-12-07 17:15:49.000000000 +0100
++++ ceph-16.2.7/src/json_spirit/json_spirit_value.h	2022-02-13 10:26:48.023109513 +0100
 @@ -51,6 +51,7 @@
          Value_impl( const Array&       value );
          Value_impl( bool               value );
