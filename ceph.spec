@@ -52,6 +52,7 @@ Patch6:		types.patch
 Patch7:		use-provided-cpu-flag-values.patch
 Patch8:		ix86-no-asm.patch
 Patch9:		long-int-time_t.patch
+Patch10:	fuse3-api.patch
 URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -78,7 +79,7 @@ BuildRequires:	libaio-devel
 BuildRequires:	libatomic_ops
 BuildRequires:	libblkid-devel >= 2.17
 BuildRequires:	libedit-devel >= 2.11
-BuildRequires:	libfuse-devel
+BuildRequires:	libfuse3-devel
 # +RDMA?
 %{?with_accelio:BuildRequires:	libibverbs-devel}
 BuildRequires:	libltdl-devel
@@ -283,6 +284,7 @@ uruchamiania demonów.
 %ifarch %{ix86}
 %patch9 -p1
 %endif
+%patch10 -p1
 
 %build
 install -d build

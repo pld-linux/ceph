@@ -1,0 +1,11 @@
+--- ceph-16.2.7/src/client/fuse_ll.cc~	2021-12-07 17:15:49.000000000 +0100
++++ ceph-16.2.7/src/client/fuse_ll.cc	2022-02-13 13:00:03.661557137 +0100
+@@ -247,7 +247,7 @@
+ }
+ 
+ static void fuse_ll_forget(fuse_req_t req, fuse_ino_t ino,
+-			   long unsigned nlookup)
++			   uint64_t nlookup)
+ {
+   CephFuse::Handle *cfuse = fuse_ll_req_prepare(req);
+   cfuse->client->ll_forget(cfuse->iget(ino), nlookup+1);
