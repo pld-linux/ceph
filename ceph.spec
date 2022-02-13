@@ -49,7 +49,9 @@ Patch3:		string-includes.patch
 Patch4:		no-virtualenvs.patch
 Patch5:		system-zstd.patch
 Patch6:		types.patch
-Patch7:		x32.patch
+Patch7:		use-provided-cpu-flag-values.patch
+Patch8:		ix86-no-asm.patch
+Patch9:		long-int-time_t.patch
 URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -276,14 +278,25 @@ uruchamiania demonów.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
-%ifarch x32
 %patch7 -p1
-%endif
+%patch8 -p1
+%patch9 -p1
 
 %build
 install -d build
 cd build
 %cmake .. \
+%ifarch %{x8664} %{ix86} x32
+	-DHAVE_INTEL_SSE=1 \
+%endif
+%ifarch %{x8664} x32
+	-DHAVE_INTEL_SSE2=1 \
+	-DHAVE_INTEL_SSE3=1 \
+	-DHAVE_INTEL_SSSE3=1 \
+	-DHAVE_INTEL_PCLMUL=1 \
+	-DHAVE_INTEL_SSE4_1=1 \
+	-DHAVE_INTEL_SSE4_2=1 \
+%endif
 	-DALLOCATOR="%{?with_tcmalloc:tcmalloc}%{!?with_tcmalloc:libc}" \
 	-DFIO_INCLUDE_DIR=/usr/include/fio \
 	-DWITH_PYTHON3=%{py3_ver} \
