@@ -35,7 +35,7 @@ Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	16.2.7
-Release:	1
+Release:	2
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
@@ -285,6 +285,9 @@ uruchamiania demonów.
 %patch9 -p1
 %endif
 %patch10 -p1
+
+%{__sed} -E -i -e '1s,#!\s*/usr/bin/awk(\s|$),#!/bin/awk\1,' \
+	src/rgw/rgw-gap-list-comparator
 
 %build
 install -d build
