@@ -1,4 +1,8 @@
 # TODO:
+# - libzbd bluestore backend? (WITH_ZBD=ON, BR: libzbd-devel)
+# - bluefs? (WITH_BLUEFS=ON)
+# - QATZIP? (WITH_QATZIP=ON, BR: qatzip-devel)
+# - brotli? (WITH_BROTLI=ON, uses internal brotli as downloaded subproject)
 # - proper init scripts if non-systemd boot is too be supported
 #   (upstream scripts seem overcomplicated and hardly useful)
 # - run as non-root user
@@ -7,12 +11,13 @@
 #
 # Conditional build:
 %bcond_without	java		# Java binding
-%bcond_with	accelio		# Accelio transport support [needs update for internal API changes]
 %bcond_with	cryptopp	# use cryptopp instead of NSS crypto/SSL
 %bcond_with	dpdk		# DPDK messaging (requires cryptopp instead of nss)
 %bcond_with	fcgi		# RADOS Gateway FCGI frontend
-%bcond_with	fio		# FIO engines support
+%bcond_with	fio		# FIO engines support (currently downloads fio as internal subproject)
+%bcond_with	kerberos	# GSSAPI/KRB5 support
 %bcond_without	pmem		# PMDK (persistent memory) support
+%bcond_without	rdma		# RDMA transport support
 %bcond_with	spdk		# Ceph SPDK support (DPDK based)
 %bcond_without	system_rocksdb	# system RocksDB storage support
 %bcond_with	zfs		# ZFS support [not ready for zfs 0.8.x]
@@ -53,22 +58,25 @@ Patch7:		use-provided-cpu-flag-values.patch
 Patch8:		ix86-no-asm.patch
 Patch9:		long-int-time_t.patch
 Patch10:	fuse3-api.patch
+Patch11:	%{name}-liburing.patch
 URL:		https://ceph.io/
-%{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
-BuildRequires:	boost-devel >= 1.66
-BuildRequires:	boost-python3-devel >= 1.66
+BuildRequires:	boost-devel >= 1.72
+BuildRequires:	boost-python3-devel >= 1.72
 BuildRequires:	cmake >= 3.22.2
 %{?with_cryptopp:BuildRequires:	cryptopp-devel}
+BuildRequires:	cryptsetup-devel >= 2.0.5
 BuildRequires:	curl-devel
 %if %{with dpdk} || %{with spdk}
 BuildRequires:	dpdk-devel
 %endif
+BuildRequires:	doxygen
 BuildRequires:	expat-devel >= 1.95
 %{?with_fcgi:BuildRequires:	fcgi-devel}
-%{?with_fio:BuildRequires:	fio-devel}
+%{?with_fio:BuildRequires:	fio-devel >= 3.15}
 BuildRequires:	gdbm-devel
-BuildRequires:	gperftools-devel
+%{?with_tcmalloc:BuildRequires:	gperftools-devel >= 2.6.2}
+%{?with_kerberos:BuildRequires:	heimdal-devel}
 %if %{with java}
 BuildRequires:	jdk
 BuildRequires:	jre-X11
@@ -78,37 +86,44 @@ BuildRequires:	leveldb-devel >= 1.2
 BuildRequires:	libaio-devel
 BuildRequires:	libatomic_ops
 BuildRequires:	libblkid-devel >= 2.17
+BuildRequires:	libcap-ng-devel
 BuildRequires:	libedit-devel >= 2.11
-BuildRequires:	libfuse3-devel
-# +RDMA?
-%{?with_accelio:BuildRequires:	libibverbs-devel}
+BuildRequires:	libfmt-devel >= 6.0.0
+BuildRequires:	libfuse3-devel >= 3
+%{?with_rdma:BuildRequires:	libibverbs-devel}
+BuildRequires:	libicu-devel >= 52.0
 BuildRequires:	libltdl-devel
-BuildRequires:	librdkafka-devel
-%{?with_accelio:BuildRequires:	librdmacm-devel}
-BuildRequires:	libstdc++-devel >= 6:4.7
-%{?with_tcmalloc:BuildRequires:	libtcmalloc-devel}
+BuildRequires:	libnl-devel >= 3.2
+BuildRequires:	librdkafka-devel >= 0.9.2
+%{?with_rdma:BuildRequires:	librdmacm-devel}
+BuildRequires:	libstdc++-devel >= 6:7
+%{?with_tcmalloc:BuildRequires:	libtcmalloc-devel >= 2.6.2}
 BuildRequires:	libtool >= 2:1.5
+BuildRequires:	liburing-devel
 BuildRequires:	libuuid-devel
 BuildRequires:	libxml2-devel >= 2.0
 %{?with_lttng:BuildRequires:	lttng-ust-devel}
-BuildRequires:	lua-devel
+BuildRequires:	lua-devel >= 5.3
 BuildRequires:	lz4-devel >= 1:1.7
+BuildRequires:	ncurses-devel
 %{!?with_cryptopp:BuildRequires:	nss-devel >= 3}
 BuildRequires:	oath-toolkit-devel
 BuildRequires:	openldap-devel
-BuildRequires:	openssl-devel
+BuildRequires:	openssl-devel >= 1.1
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
-%{?with_pmem:BuildRequires:	pmdk-devel}
+%{?with_pmem:BuildRequires:	pmdk-devel >= 1.10}
 BuildRequires:	python3 >= 1:3.2
 BuildRequires:	python3-devel >= 1:3.2
-BuildRequires:	python3-tox >= 2.9.1
+%{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
 BuildRequires:	python3-Cython
-%{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.6.0}
+BuildRequires:	rabbitmq-c-devel
+%{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.14.0}
 BuildRequires:	rpmbuild(macros) >= 1.671
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
 BuildRequires:	sphinx-pdg >= 3.0
+BuildRequires:	sqlite3-devel >= 3
 BuildRequires:	udev-devel
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
 BuildRequires:	xfsprogs-devel
@@ -153,7 +168,7 @@ Summary(pl.UTF-8):	Pliki nagłówkowe bibliotek Cepha
 License:	LGPL v2.1
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
-Requires:	boost-devel >= 1.66
+Requires:	boost-devel >= 1.72
 Requires:	curl-devel
 Requires:	expat-devel
 Requires:	fcgi-devel
@@ -161,7 +176,7 @@ Requires:	nss-devel >= 3
 Requires:	leveldb-devel
 Requires:	libatomic_ops
 Requires:	libblkid-devel >= 2.17
-Requires:	libstdc++-devel >= 6:4.7
+Requires:	libstdc++-devel >= 6:7
 Requires:	libuuid-devel
 %{?with_lttng:Requires:	lttng-ust-devel}
 Requires:	openldap-devel
@@ -285,6 +300,7 @@ uruchamiania demonów.
 %patch9 -p1
 %endif
 %patch10 -p1
+%patch11 -p1
 
 %{__sed} -E -i -e '1s,#!\s*/usr/bin/awk(\s|$),#!/bin/awk\1,' \
 	src/rgw/rgw-gap-list-comparator
@@ -310,23 +326,25 @@ cd build
 	-DPYTHON=%{__python3} \
 	-DSPHINX_BUILD=/usr/bin/sphinx-build \
 	%{!?with_babeltrace:-DWITH_BABELTRACE=OFF} \
+	%{?with_pmem:-DWITH_BLUESTORE_PMEM=ON} \
 	%{?with_java:-DWITH_CEPHFS_JAVA=ON} \
-	%{?with_java:-DJAVA_JVM_LIBRARY:PATH=%{_jvmdir}/java/lib/server/libjvm.so} \
+	%{?with_java:-DJAVA_HOME:PATH=%{java_home}} \
 	%{?with_dpdk:-DWITH_DPDK=ON} \
 	%{?with_fio:-DWITH_FIO=ON} \
+	%{?with_kerberos:-DWITH_GSSAPI=ON} \
 	%{!?with_lttng:-DWITH_LTTNG=OFF} \
 	-DLUA_INCLUDE_DIR=%{_includedir}/lua \
 	-DWITH_LZ4=ON \
 	%{?with_cryptopp:-DWITH_NSS=OFF} \
 	-DWITH_OCF=ON \
-	%{?with_pmem:-DWITH_PMEM=ON} \
 	%{?with_fcgi:-DWITH_RADOSGW_FCGI_FRONTEND=ON} \
 	-DWITH_MGR_DASHBOARD_FRONTEND=OFF \
+	%{!?with_rdma:-DWITH_RDMA=OFF} \
 	%{?with_spdk:-DWITH_SPDK=ON} \
 	-DWITH_SYSTEM_BOOST=ON \
+	-DWITH_SYSTEM_LIBURING=ON \
 	%{?with_system_rocksdb:-DWITH_SYSTEM_ROCKSDB=ON} \
 	-DWITH_SYSTEMD=ON \
-	%{?with_accelio:-DWITH_XIO=ON} \
 	%{?with_zfs:-DWITH_ZFS=ON} \
 	-DWITH_REENTRANT_STRSIGNAL=ON \
 	%{!?with_tests:-DWITH_TESTS=OFF}
@@ -352,6 +370,11 @@ cp -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
 cp -p %{SOURCE1} $RPM_BUILD_ROOT/etc/sysconfig/ceph
 ln -sf /dev/null $RPM_BUILD_ROOT%{systemdunitdir}/ceph.service
 cp -p %{SOURCE3} $RPM_BUILD_ROOT%{systemdtmpfilesdir}/ceph.conf
+
+%if %{without tests}
+%{__rm} $RPM_BUILD_ROOT%{_javadir}/libcephfs-test.jar
+%{__rm} -r $RPM_BUILD_ROOT%{py3_sitedir}/{ceph,ceph_volume}/tests
+%endif
 
 %py3_comp $RPM_BUILD_ROOT%{py3_sitescriptdir}
 %py3_ocomp $RPM_BUILD_ROOT%{py3_sitescriptdir}
@@ -636,12 +659,23 @@ fi
 
 %files -n python3-ceph
 %defattr(644,root,root,755)
-%{py3_sitedir}/ceph
+%dir %{py3_sitedir}/ceph
+%{py3_sitedir}/ceph/*.py
+%{py3_sitedir}/ceph/__pycache__
+%{py3_sitedir}/ceph/deployment
 %{py3_sitedir}/ceph-1.0.0-py*.egg-info
 %attr(755,root,root) %{py3_sitedir}/cephfs.cpython-*.so
 %{py3_sitedir}/cephfs-2.0.0-py*.egg-info
 %{py3_sitedir}/cephfs_top-0.0.1-py*.egg-info
-%{py3_sitedir}/ceph_volume
+%dir %{py3_sitedir}/ceph_volume
+%{py3_sitedir}/ceph_volume/*.py
+%{py3_sitedir}/ceph_volume/__pycache__
+%{py3_sitedir}/ceph_volume/api
+%{py3_sitedir}/ceph_volume/devices
+%{py3_sitedir}/ceph_volume/drive_group
+%{py3_sitedir}/ceph_volume/inventory
+%{py3_sitedir}/ceph_volume/systemd
+%{py3_sitedir}/ceph_volume/util
 %{py3_sitedir}/ceph_volume-1.0.0-py*.egg-info
 %attr(755,root,root) %{py3_sitedir}/rados.cpython-*.so
 %{py3_sitedir}/rados-2.0.0-py*.egg-info
@@ -655,10 +689,6 @@ fi
 %{py3_sitescriptdir}/__pycache__/ceph_argparse.cpython-*.py[co]
 %{py3_sitescriptdir}/__pycache__/ceph_daemon.cpython-*.py[co]
 %{py3_sitescriptdir}/__pycache__/ceph_volume_client.cpython-*.py[co]
-%if %{without tests}
-%exclude %{py3_sitedir}/ceph/tests
-%exclude %{py3_sitedir}/ceph_volume/tests
-%endif
 
 %if %{with java}
 %files -n java-cephfs
@@ -727,6 +757,11 @@ fi
 %attr(755,root,root) %{_bindir}/ceph_tpbench
 %attr(755,root,root) %{_bindir}/ceph_xattr_bench
 %attr(755,root,root) %{_libdir}/ceph/ceph-monstore-update-crush.sh
+%{py3_sitedir}/ceph/tests
+%{py3_sitedir}/ceph_volume/tests
+%if %{with java}
+%{_javadir}/libcephfs-test.jar
+%endif
 %{_mandir}/man8/ceph-debugpack.8*
 %{_mandir}/man8/ceph-kvstore-tool.8*
 %endif
