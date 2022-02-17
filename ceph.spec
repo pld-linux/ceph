@@ -82,7 +82,7 @@ BuildRequires:	jdk
 BuildRequires:	jre-X11
 %endif
 BuildRequires:	keyutils-devel
-BuildRequires:	leveldb-devel >= 1.2
+BuildRequires:	leveldb-devel >= 1.23-2
 BuildRequires:	libaio-devel
 BuildRequires:	libatomic_ops
 BuildRequires:	libblkid-devel >= 2.17
@@ -173,7 +173,7 @@ Requires:	curl-devel
 Requires:	expat-devel
 Requires:	fcgi-devel
 Requires:	nss-devel >= 3
-Requires:	leveldb-devel
+Requires:	leveldb-devel >= 1.23-2
 Requires:	libatomic_ops
 Requires:	libblkid-devel >= 2.17
 Requires:	libstdc++-devel >= 6:7
