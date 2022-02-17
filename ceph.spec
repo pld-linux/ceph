@@ -195,6 +195,7 @@ Summary:	Ceph Python 3 bindings
 Summary(pl.UTF-8):	Wiązania Pythona 3 do bibliotek Cepha
 Group:		Development/Languages/Python
 Requires:	%{name}-libs = %{version}-%{release}
+Obsoletes:	python-ceph < 13
 
 %description -n python3-ceph
 Ceph Python 3 bindings.
