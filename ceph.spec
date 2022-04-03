@@ -112,7 +112,7 @@ BuildRequires:	openldap-devel
 BuildRequires:	openssl-devel >= 1.1
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
-%{?with_pmem:BuildRequires:	pmdk-devel >= 1.10}
+%{?with_pmem:BuildRequires:	pmdk-devel >= 1.6.1}
 BuildRequires:	python3 >= 1:3.2
 BuildRequires:	python3-devel >= 1:3.2
 %{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
@@ -327,7 +327,10 @@ cd build
 	-DPYTHON=%{__python3} \
 	-DSPHINX_BUILD=/usr/bin/sphinx-build \
 	%{!?with_babeltrace:-DWITH_BABELTRACE=OFF} \
-	%{?with_pmem:-DWITH_BLUESTORE_PMEM=ON} \
+%if %{with pmem}
+	-DWITH_BLUESTORE_PMEM=ON \
+	-DWITH_SYSTEM_PMDK:BOOL=ON \
+%endif
 	%{?with_java:-DWITH_CEPHFS_JAVA=ON} \
 	%{?with_java:-DJAVA_HOME:PATH=%{java_home}} \
 	%{?with_dpdk:-DWITH_DPDK=ON} \
