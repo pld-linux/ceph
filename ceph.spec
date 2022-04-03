@@ -377,7 +377,7 @@ cp -p %{SOURCE3} $RPM_BUILD_ROOT%{systemdtmpfilesdir}/ceph.conf
 
 %if %{without tests}
 %{__rm} $RPM_BUILD_ROOT%{_javadir}/libcephfs-test.jar
-%{__rm} -r $RPM_BUILD_ROOT%{py3_sitedir}/{ceph,ceph_volume}/tests
+%{__rm} -r $RPM_BUILD_ROOT%{py3_sitescriptdir}/{ceph,ceph_volume}/tests
 %endif
 
 %py3_comp $RPM_BUILD_ROOT%{py3_sitescriptdir}
@@ -663,36 +663,24 @@ fi
 
 %files -n python3-ceph
 %defattr(644,root,root,755)
-%dir %{py3_sitedir}/ceph
-%{py3_sitedir}/ceph/*.py
-%{py3_sitedir}/ceph/__pycache__
-%{py3_sitedir}/ceph/deployment
-%{py3_sitedir}/ceph-1.0.0-py*.egg-info
 %attr(755,root,root) %{py3_sitedir}/cephfs.cpython-*.so
-%{py3_sitedir}/cephfs-2.0.0-py*.egg-info
-%{py3_sitedir}/cephfs_top-0.0.1-py*.egg-info
-%dir %{py3_sitedir}/ceph_volume
-%{py3_sitedir}/ceph_volume/*.py
-%{py3_sitedir}/ceph_volume/__pycache__
-%{py3_sitedir}/ceph_volume/api
-%{py3_sitedir}/ceph_volume/devices
-%{py3_sitedir}/ceph_volume/drive_group
-%{py3_sitedir}/ceph_volume/inventory
-%{py3_sitedir}/ceph_volume/systemd
-%{py3_sitedir}/ceph_volume/util
-%{py3_sitedir}/ceph_volume-1.0.0-py*.egg-info
 %attr(755,root,root) %{py3_sitedir}/rados.cpython-*.so
-%{py3_sitedir}/rados-2.0.0-py*.egg-info
 %attr(755,root,root) %{py3_sitedir}/rbd.cpython-*.so
-%{py3_sitedir}/rbd-2.0.0-py*.egg-info
 %attr(755,root,root) %{py3_sitedir}/rgw.cpython-*.so
+%{py3_sitedir}/cephfs-2.0.0-py*.egg-info
+%{py3_sitedir}/rados-2.0.0-py*.egg-info
+%{py3_sitedir}/rbd-2.0.0-py*.egg-info
 %{py3_sitedir}/rgw-2.0.0-py*.egg-info
-%{py3_sitescriptdir}/ceph_argparse.py
-%{py3_sitescriptdir}/ceph_daemon.py
-%{py3_sitescriptdir}/ceph_volume_client.py
-%{py3_sitescriptdir}/__pycache__/ceph_argparse.cpython-*.py[co]
-%{py3_sitescriptdir}/__pycache__/ceph_daemon.cpython-*.py[co]
-%{py3_sitescriptdir}/__pycache__/ceph_volume_client.cpython-*.py[co]
+%dir %{py3_sitescriptdir}/ceph
+%{py3_sitescriptdir}/ceph/*.py
+%{py3_sitescriptdir}/ceph/__pycache__
+%{py3_sitescriptdir}/ceph/deployment
+%{py3_sitescriptdir}/ceph_volume
+%{py3_sitescriptdir}/*.py
+%{py3_sitescriptdir}/__pycache__/*.py*
+%{py3_sitescriptdir}/ceph-1.0.0-py*.egg-info
+%{py3_sitescriptdir}/ceph_volume-1.0.0-py*.egg-info
+%{py3_sitescriptdir}/cephfs_top-0.0.1-py*.egg-info
 
 %if %{with java}
 %files -n java-cephfs
