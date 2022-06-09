@@ -9,11 +9,11 @@
  {
    fio_ro_check(td, u);
  
---- ceph-12.2.13/src/test/fio/CMakeLists.txt.orig	2020-01-30 21:52:36.000000000 +0100
-+++ ceph-12.2.13/src/test/fio/CMakeLists.txt	2020-06-05 06:18:00.642074789 +0200
-@@ -15,4 +15,4 @@
+--- ceph-13.2.10/src/test/fio/CMakeLists.txt.orig	2020-01-30 21:52:36.000000000 +0100
++++ ceph-13.2.10/src/test/fio/CMakeLists.txt	2020-06-05 06:18:00.642074789 +0200
+@@ -18,4 +18,4 @@ if(WITH_FIO)
+   add_dependencies(fio_ceph_objectstore fio_ext)
  endif()
- 
  target_link_libraries(fio_ceph_objectstore os global)
 -install(TARGETS fio_ceph_objectstore DESTINATION lib)
 +install(TARGETS fio_ceph_objectstore DESTINATION lib${LIB_SUFFIX})
