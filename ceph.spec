@@ -58,9 +58,9 @@ Patch10:	%{name}-includes.patch
 URL:		https://ceph.io/
 %{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
-BuildRequires:	boost-devel >= 1.66
-BuildRequires:	boost-python-devel >= 1.66
-BuildRequires:	cmake >= 2.8.11
+BuildRequires:	boost-devel >= 1.67
+BuildRequires:	boost-python-devel >= 1.67
+BuildRequires:	cmake >= 2.8.12
 %{?with_cryptopp:BuildRequires:	cryptopp-devel}
 BuildRequires:	curl-devel
 %if %{with dpdk} || %{with spdk}
@@ -103,8 +103,7 @@ BuildRequires:	python-devel >= 1:2.7
 BuildRequires:	python-Cython
 BuildRequires:	python3-devel >= 1:3.2
 BuildRequires:	python3-Cython
-# upstream uses 3.0.0, rocksdb patch adjusts for 5.6.0 API change
-%{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.6.0}
+%{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.8}
 BuildRequires:	rpmbuild(macros) >= 1.671
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
@@ -155,7 +154,7 @@ Summary(pl.UTF-8):	Pliki nagłówkowe bibliotek Cepha
 License:	LGPL v2.1
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
-Requires:	boost-devel >= 1.66
+Requires:	boost-devel >= 1.67
 Requires:	curl-devel
 Requires:	expat-devel
 Requires:	fcgi-devel
