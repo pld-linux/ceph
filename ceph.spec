@@ -39,12 +39,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	16.2.7
-Release:	5
+Version:	16.2.9
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	3cb3d259e59920b0d7145537f338aeec
+# Source0-md5:	d823195299c0950659343fc6ad39aa1b
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-python.patch
@@ -122,7 +122,7 @@ BuildRequires:	rabbitmq-c-devel
 BuildRequires:	rpmbuild(macros) >= 1.671
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
-BuildRequires:	sphinx-pdg >= 3.0
+BuildRequires:	sphinx-pdg >= 4.4.0
 BuildRequires:	sqlite3-devel >= 3
 BuildRequires:	udev-devel
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
@@ -671,13 +671,12 @@ fi
 %{py3_sitedir}/rados-2.0.0-py*.egg-info
 %{py3_sitedir}/rbd-2.0.0-py*.egg-info
 %{py3_sitedir}/rgw-2.0.0-py*.egg-info
-%dir %{py3_sitescriptdir}/ceph
-%{py3_sitescriptdir}/ceph/*.py
-%{py3_sitescriptdir}/ceph/__pycache__
-%{py3_sitescriptdir}/ceph/deployment
+%{py3_sitescriptdir}/ceph_*.py
+%{py3_sitescriptdir}/__pycache__/ceph_*.py*
+%{py3_sitescriptdir}/ceph
 %{py3_sitescriptdir}/ceph_volume
-%{py3_sitescriptdir}/*.py
-%{py3_sitescriptdir}/__pycache__/*.py*
+%{py3_sitescriptdir}/ceph
+%{py3_sitescriptdir}/ceph_volume
 %{py3_sitescriptdir}/ceph-1.0.0-py*.egg-info
 %{py3_sitescriptdir}/ceph_volume-1.0.0-py*.egg-info
 %{py3_sitescriptdir}/cephfs_top-0.0.1-py*.egg-info
