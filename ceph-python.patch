@@ -1,14 +1,15 @@
---- ceph-12.2.13/cmake/modules/Distutils.cmake.orig	2020-01-30 21:52:36.000000000 +0100
-+++ ceph-12.2.13/cmake/modules/Distutils.cmake	2020-05-29 22:15:43.919231143 +0200
-@@ -17,10 +17,7 @@
+--- ceph-14.2.22/cmake/modules/Distutils.cmake.orig	2022-06-09 21:22:26.441475395 +0200
++++ ceph-14.2.22/cmake/modules/Distutils.cmake	2022-06-09 21:42:20.791671711 +0200
+@@ -17,11 +17,9 @@ function(distutils_install_module name)
    install(CODE "
      set(options --prefix=${CMAKE_INSTALL_PREFIX})
      if(DEFINED ENV{DESTDIR})
 -      if(EXISTS /etc/debian_version)
 -        list(APPEND options --install-layout=deb)
 -      endif()
--      list(APPEND options --root=\$ENV{DESTDIR})
-+      list(APPEND options --root=\$ENV{DESTDIR} --optimize=2)
+       list(APPEND options
+         --root=\$ENV{DESTDIR}
++        --optimize=2
+         --single-version-externally-managed)
        if(NOT \"${DU_INSTALL_SCRIPT}\" STREQUAL \"\")
          list(APPEND options --install-script=${DU_INSTALL_SCRIPT})
-       endif()

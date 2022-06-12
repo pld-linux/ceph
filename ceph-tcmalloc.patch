@@ -1,5 +1,5 @@
---- ceph-13.2.10/cmake/modules/Findgperftools.cmake.orig	2020-01-30 21:52:36.000000000 +0100
-+++ ceph-13.2.10/cmake/modules/Findgperftools.cmake	2020-05-28 17:05:49.948032294 +0200
+--- ceph-14.2.22/cmake/modules/Findgperftools.cmake.orig	2020-01-30 21:52:36.000000000 +0100
++++ ceph-14.2.22/cmake/modules/Findgperftools.cmake	2020-05-28 17:05:49.948032294 +0200
 @@ -31,7 +31,7 @@ if(Tcmalloc_INCLUDE_DIR AND EXISTS "${Tc
    endif()
  endif()
@@ -9,13 +9,12 @@
    string(TOUPPER ${component} COMPONENT)
    find_library(GPERFTOOLS_${COMPONENT}_LIBRARY ${component}
      HINTS $ENV{GPERF_ROOT}/lib)
-@@ -40,7 +40,7 @@ endforeach()
- 
- include(FindPackageHandleStandardArgs)
- find_package_handle_standard_args(gperftools
--  REQUIRED_VARS ${GPERFTOOLS_LIBRARIES} GPERFTOOLS_INCLUDE_DIR
-+  REQUIRED_VARS ${GPERFTOOLS_LIBRARIES} Tcmalloc_INCLUDE_DIR
+@@ -54,7 +54,7 @@ find_package_handle_standard_args(gperft
+   REQUIRED_VARS ${_gperftools_FIND_REQUIRED_VARS}
    VERSION_VAR TCMALLOC_VERSION_STRING)
  
 -mark_as_advanced(${GPERFTOOLS_LIBRARIES} GPERFTOOLS_INCLUDE_DIR)
-+mark_as_advanced(${GPERFTOOLS_LIBRARIES} Tcmalloc_INCLUDE_DIR)
++mark_as_advanced(${GPERFTOOLS_LIBRARIES} GPERFTOOLS_INCLUDE_DIR Tcmalloc_INCLUDE_DIR)
+ 
+ if(gperftools_FOUND)
+   foreach(component tcmalloc tcmalloc_minimal profiler)

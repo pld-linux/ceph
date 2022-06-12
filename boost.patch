@@ -8,28 +8,6 @@ BOOST_STATIC_CONSTEXPR boost::arg<1> _1;
 constexpr __ph<1>   _1{};
                     ^
 
---- CMakeLists.txt.orig	2020-01-30 21:52:36.000000000 +0100
-+++ CMakeLists.txt	2020-05-28 16:50:46.412927163 +0200
-@@ -563,7 +563,7 @@
- set(BOOST_HEADER_COMPONENTS container)
- 
- if(WITH_MGR)
--	list(APPEND BOOST_COMPONENTS python)
-+	list(APPEND BOOST_COMPONENTS python27)
- endif()
- if(WITH_BOOST_CONTEXT)
-   list(APPEND BOOST_COMPONENTS context coroutine)
---- src/CMakeLists.txt.orig	2020-01-30 21:52:36.000000000 +0100
-+++ src/CMakeLists.txt	2020-05-28 20:58:47.848974172 +0200
-@@ -722,7 +722,7 @@
-                  $<TARGET_OBJECTS:heap_profiler_objs>)
-   target_include_directories(ceph-mgr SYSTEM PRIVATE "${PYTHON_INCLUDE_DIRS}")
-   target_link_libraries(ceph-mgr osdc client global-static ceph-common
--      Boost::python ${MGR_PYTHON_LIBRARIES} ${BLKID_LIBRARIES} ${CMAKE_DL_LIBS} ${ALLOC_LIBS})
-+      Boost::python27 ${MGR_PYTHON_LIBRARIES} ${BLKID_LIBRARIES} ${CMAKE_DL_LIBS} ${ALLOC_LIBS})
-   install(TARGETS ceph-mgr DESTINATION bin)
- endif (WITH_MGR)
- 
 --- src/test/librbd/test_mock_Journal.cc.orig	2020-01-30 21:52:36.000000000 +0100
 +++ src/test/librbd/test_mock_Journal.cc	2020-05-29 06:26:16.934514447 +0200
 @@ -482,7 +482,7 @@

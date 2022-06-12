@@ -9,15 +9,6 @@
                               cct->_conf->osd_pg_log_trim_max);
      if (num_to_trim < cct->_conf->osd_pg_log_trim_min &&
          cct->_conf->osd_pg_log_trim_max >= cct->_conf->osd_pg_log_trim_min) {
-@@ -1628,7 +1628,7 @@
-       pg_log.get_log().approx_size() > target) {
-     dout(10) << __func__ << " approx pg log length =  "
-              << pg_log.get_log().approx_size() << dendl;
--    size_t num_to_trim = std::min(pg_log.get_log().approx_size() - target,
-+    size_t num_to_trim = std::min<uint64_t>(pg_log.get_log().approx_size() - target,
- 				  cct->_conf->osd_pg_log_trim_max);
-     dout(10) << __func__ << " num_to_trim =  " << num_to_trim << dendl;
-     if (num_to_trim < cct->_conf->osd_pg_log_trim_min &&
 --- ceph-12.2.13/src/os/filestore/FileStore.cc.orig	2020-01-30 21:52:36.000000000 +0100
 +++ ceph-12.2.13/src/os/filestore/FileStore.cc	2020-06-03 21:27:26.387210803 +0200
 @@ -922,7 +922,7 @@
@@ -38,28 +29,6 @@
        !g_ceph_context->check_experimental_feature_enabled("btrfs")) {
      derr <<__FUNC__ << ": deprecated btrfs support is not enabled" << dendl;
      return -EPERM;
---- ceph-13.2.10/src/mon/OSDMonitor.cc.orig	2020-04-23 18:32:31.000000000 +0200
-+++ ceph-13.2.10/src/mon/OSDMonitor.cc	2021-09-20 20:03:13.672134022 +0200
-@@ -820,7 +820,7 @@ OSDMonitor::update_pending_pgs(const OSD
- 	     << " modified " << p->second.modified
- 	     << " [" << p->second.start << "-" << p->second.end << ")"
- 	     << dendl;
--    int n = std::min(max - pending_creatings.pgs.size(),
-+    int n = std::min<uint64_t>(max - pending_creatings.pgs.size(),
- 		p->second.end - p->second.start);
-     ps_t first = p->second.start;
-     ps_t end = first + n;
---- ceph-13.2.10/src/os/bluestore/BlueStore.cc.orig	2020-04-23 18:32:31.000000000 +0200
-+++ ceph-13.2.10/src/os/bluestore/BlueStore.cc	2021-09-20 20:34:23.352005097 +0200
-@@ -12614,7 +12614,7 @@ size_t BlueStoreRepairer::StoreSpaceTrac
-     if (e.second == 0) {
-       continue;
-     }
--    size_t pos = max(e.first / granularity, prev_pos);
-+    size_t pos = max<uint64_t>(e.first / granularity, prev_pos);
-     size_t end_pos = 1 + (e.first + e.second - 1) / granularity;
-     while (pos != npos && pos < end_pos)  {
-         ceph_assert( collections_bfs[pos].element_count() ==
 --- ceph-13.2.10/src/rgw/rgw_client_io_filters.h.orig	2020-04-23 18:32:31.000000000 +0200
 +++ ceph-13.2.10/src/rgw/rgw_client_io_filters.h	2021-09-22 17:02:54.573378159 +0200
 @@ -291,7 +291,7 @@ public:
@@ -71,46 +40,99 @@
        size_t sent = 0;
  
        sent += DecoratedRestfulClient<T>::send_body(chunk_size, chunk_size_len);
---- ceph-13.2.10/src/rgw/rgw_rest_swift.cc.orig	2020-04-23 18:32:31.000000000 +0200
-+++ ceph-13.2.10/src/rgw/rgw_rest_swift.cc	2021-09-22 17:04:01.473340779 +0200
-@@ -726,7 +726,7 @@ static inline int handle_metadata_errors
-   } else if (op_ret == -E2BIG) {
-     const auto error_message = boost::str(
-       boost::format("Too many metadata items; max %lld")
--        % s->cct->_conf->get_val<size_t>("rgw_max_attrs_num_in_req"));
-+        % s->cct->_conf->get_val<Option::size_t>("rgw_max_attrs_num_in_req"));
-     set_req_state_err(s, EINVAL, error_message);
-     return -EINVAL;
-   }
-@@ -1781,7 +1781,7 @@ void RGWInfo_ObjStore_SWIFT::list_swift_
-   formatter.dump_string("version", ceph_version);
+--- ceph-14.2.22/src/include/buffer.h.orig	2021-06-30 00:09:10.000000000 +0200
++++ ceph-14.2.22/src/include/buffer.h	2022-06-10 22:04:13.923155571 +0200
+@@ -737,7 +737,9 @@ inline namespace v14_2_0 {
  
-   const size_t max_attr_name_len = \
--    g_conf->get_val<size_t>("rgw_max_attr_name_len");
-+    g_conf->get_val<Option::size_t>("rgw_max_attr_name_len");
-   if (max_attr_name_len) {
-     const size_t meta_name_limit = \
-       max_attr_name_len - strlen(RGW_ATTR_PREFIX RGW_AMZ_META_PREFIX);
-@@ -1794,7 +1794,7 @@ void RGWInfo_ObjStore_SWIFT::list_swift_
-   }
- 
-   const size_t meta_num_limit = \
--    g_conf->get_val<size_t>("rgw_max_attrs_num_in_req");
-+    g_conf->get_val<Option::size_t>("rgw_max_attrs_num_in_req");
-   if (meta_num_limit) {
-     formatter.dump_int("max_meta_count", meta_num_limit);
-   }
---- ceph-13.2.10/src/common/ceph_context.h.orig	2020-04-23 18:32:31.000000000 +0200
-+++ ceph-13.2.10/src/common/ceph_context.h	2021-09-23 06:29:21.645156177 +0200
-@@ -144,7 +144,11 @@ public:
-   void do_command(std::string_view command, const cmdmap_t& cmdmap,
- 		  std::string_view format, ceph::bufferlist *out);
- 
+       void advance(int o) = delete;
+       void advance(unsigned o);
 +#ifdef __LP64__
-   static constexpr std::size_t largest_singleton = sizeof(void*) * 72;
-+#else
-+  static constexpr std::size_t largest_singleton = sizeof(void*) * 96;
+       void advance(size_t o) { advance(static_cast<unsigned>(o)); }
 +#endif
+       void seek(unsigned o);
+       char operator*() const;
+       iterator_impl& operator++();
+--- ceph-14.2.22/src/common/config_values.h.orig	2021-06-30 00:09:10.000000000 +0200
++++ ceph-14.2.22/src/common/config_values.h	2022-06-11 12:41:03.898142864 +0200
+@@ -49,7 +49,7 @@ public:
+ #define OPTION_OPT_U32(name) uint64_t name;
+ #define OPTION_OPT_U64(name) uint64_t name;
+ #define OPTION_OPT_UUID(name) uuid_d name;
+-#define OPTION_OPT_SIZE(name) size_t name;
++#define OPTION_OPT_SIZE(name) uint64_t name;
+ #define OPTION(name, ty)       \
+   public:                      \
+     OPTION_##ty(name)          
+--- ceph-14.2.22/src/compressor/snappy/SnappyCompressor.h.orig	2021-06-30 00:09:10.000000000 +0200
++++ ceph-14.2.22/src/compressor/snappy/SnappyCompressor.h	2022-06-11 13:56:24.966983465 +0200
+@@ -96,7 +96,7 @@ class SnappyCompressor : public Compress
+     if (qat_enabled)
+       return qat_accel.decompress(p, compressed_len, dst);
+ #endif
+-    snappy::uint32 res_len = 0;
++    uint32_t res_len = 0;
+     BufferlistSource source_1(p, compressed_len);
+     if (!snappy::GetUncompressedLength(&source_1, &res_len)) {
+       return -1;
+--- ceph-14.2.22/src/os/bluestore/BlueFS.cc.orig	2021-06-30 00:09:10.000000000 +0200
++++ ceph-14.2.22/src/os/bluestore/BlueFS.cc	2022-06-11 16:48:43.774306676 +0200
+@@ -1737,7 +1737,7 @@ int64_t BlueFS::_read_random(
+       }
+     } else {
+       auto left = buf->get_buf_remaining(off);
+-      int64_t r = std::min(len, left);
++      int64_t r = std::min<int64_t>(len, left);
+       logger->inc(l_bluefs_read_random_buffer_count, 1);
+       logger->inc(l_bluefs_read_random_buffer_bytes, r);
+       dout(20) << __func__ << " left 0x" << std::hex << left
+--- ceph-14.2.22/src/os/bluestore/BlueStore.cc.orig	2021-06-30 00:09:10.000000000 +0200
++++ ceph-14.2.22/src/os/bluestore/BlueStore.cc	2022-06-11 17:36:58.645290480 +0200
+@@ -5948,7 +5948,7 @@ size_t BlueStore::available_freespace(ui
+     if (dist_to_alignment >= len)
+       return;
+     len -= dist_to_alignment;
+-    total += p2align(len, alloc_size);
++    total += p2align<uint64_t>(len, alloc_size);
+   };
+   alloc->dump(iterated_allocation);
+   return total;
+--- ceph-14.2.22/src/mds/PurgeQueue.cc.orig	2021-06-30 00:09:10.000000000 +0200
++++ ceph-14.2.22/src/mds/PurgeQueue.cc	2022-06-11 19:37:11.086217333 +0200
+@@ -499,7 +499,7 @@ void PurgeQueue::_execute_item(
  
-   template<typename T, typename... Args>
-   T& lookup_or_create_singleton_object(std::string_view name,
+   in_flight[expire_to] = item;
+   logger->set(l_pq_executing, in_flight.size());
+-  files_high_water = std::max(files_high_water, in_flight.size());
++  files_high_water = std::max<uint64_t>(files_high_water, in_flight.size());
+   logger->set(l_pq_executing_high_water, files_high_water);
+   auto ops = _calculate_ops(item);
+   ops_in_flight += ops;
+@@ -577,7 +577,7 @@ void PurgeQueue::_execute_item(
+     logger->set(l_pq_executing_ops_high_water, ops_high_water);
+     in_flight.erase(expire_to);
+     logger->set(l_pq_executing, in_flight.size());
+-    files_high_water = std::max(files_high_water, in_flight.size());
++    files_high_water = std::max<uint64_t>(files_high_water, in_flight.size());
+     logger->set(l_pq_executing_high_water, files_high_water);
+     return;
+   }
+@@ -654,7 +654,7 @@ void PurgeQueue::_execute_item_complete(
+ 
+   in_flight.erase(iter);
+   logger->set(l_pq_executing, in_flight.size());
+-  files_high_water = std::max(files_high_water, in_flight.size());
++  files_high_water = std::max<uint64_t>(files_high_water, in_flight.size());
+   logger->set(l_pq_executing_high_water, files_high_water);
+   dout(10) << "in_flight.size() now " << in_flight.size() << dendl;
+ 
+--- ceph-14.2.22/src/client/fuse_ll.cc.orig	2021-06-30 00:09:10.000000000 +0200
++++ ceph-14.2.22/src/client/fuse_ll.cc	2022-06-11 20:41:03.452122291 +0200
+@@ -192,7 +192,7 @@ static void fuse_ll_lookup(fuse_req_t re
+ }
+ 
+ static void fuse_ll_forget(fuse_req_t req, fuse_ino_t ino,
+-			   long unsigned nlookup)
++			   uint64_t nlookup)
+ {
+   CephFuse::Handle *cfuse = fuse_ll_req_prepare(req);
+   cfuse->client->ll_forget(cfuse->iget(ino), nlookup+1);
