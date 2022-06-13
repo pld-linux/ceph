@@ -2,7 +2,7 @@
 # - bluefs? (WITH_BLUEFS=ON)
 # - QATZIP? (WITH_QATZIP=ON, BR: qatzip-devel)
 # - brotli? (WITH_BROTLI=ON, uses internal brotli as downloaded subproject)
-# - seastar (WITH_SEASTAR=ON, BR: libfmt-devel >= 5.2.1, c-ares-devel >= 1.13.0)
+# - seastar (WITH_SEASTAR=ON, BR: c-ares-devel >= 1.13.0)
 # - MGR_PYTHON_VERSION=3?
 # - proper init scripts if non-systemd boot is too be supported
 #   (upstream scripts seem overcomplicated and hardly useful)
@@ -14,17 +14,19 @@
 #
 # Conditional build:
 %bcond_without	java		# Java binding
-%bcond_with	accelio		# Accelio transport support [needs update for internal API changes]
 %bcond_with	angular		# Angular-based mgr/dashboard frontend (built using npm, too outdated currently)
 %bcond_with	dpdk		# DPDK messaging
-%bcond_without	fcgi		# RADOS Gateway FCGI frontend
+# build fails with:
+# ceph-15.2.16/src/rgw/rgw_fcgi_process.cc:92:53: error: 'class rgw::sal::RGWRadosStore' has no member named 'get_new_req_id'
+%bcond_with	fcgi		# RADOS Gateway FCGI frontend
 %bcond_with	fio		# FIO engines support
 %bcond_with	kerberos	# GSSAPI/KRB5 support
 %bcond_without	pmem		# PMDK (persistent memory) support
 %bcond_without	rdma		# RDMA transport support
 %bcond_with	spdk		# Ceph SPDK support (DPDK based)
 %bcond_without	system_rocksdb	# system RocksDB storage support
-%bcond_without	zfs		# ZFS support
+# temporarily disabled: "fallthrough" define from OpenZFS's spl breaks "[[fallthrough]]" in src/include/blobhash.h
+%bcond_with	zfs		# ZFS support
 %bcond_without	lttng		# LTTng tracing
 %bcond_without	babeltrace	# Babeltrace traces support
 %bcond_without	tcmalloc	# tcmalloc allocator
@@ -40,12 +42,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	14.2.22
+Version:	15.2.16
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	7b7c68409cedb3e68c58ac44f37f9de3
+# Source0-md5:	10461364fea1f21843f107548a901905
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-init-fix.patch
@@ -57,11 +59,10 @@ Patch7:		%{name}-fcgi.patch
 Patch8:		%{name}-fio.patch
 Patch9:		%{name}-zfs.patch
 URL:		https://ceph.io/
-%{?with_accelio:BuildRequires:	accelio-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
 BuildRequires:	boost-devel >= 1.67
-BuildRequires:	boost-python-devel >= 1.67
-BuildRequires:	cmake >= 3.5.1
+BuildRequires:	boost-python3-devel >= 1.67
+BuildRequires:	cmake >= 3.10.2
 BuildRequires:	curl-devel
 %if %{with dpdk} || %{with spdk}
 BuildRequires:	dpdk-devel
@@ -71,7 +72,7 @@ BuildRequires:	expat-devel >= 1.95
 %{?with_fio:BuildRequires:	fio-devel}
 BuildRequires:	gdbm-devel
 BuildRequires:	gperf
-%{?with_tcmalloc:BuildRequires:	gperftools-devel}
+%{?with_tcmalloc:BuildRequires:	gperftools-devel >= 2.6.2}
 %{?with_kerberos:BuildRequires:	heimdal-devel}
 %if %{with java}
 BuildRequires:	jdk
@@ -83,15 +84,15 @@ BuildRequires:	libatomic_ops
 BuildRequires:	libblkid-devel >= 2.17
 BuildRequires:	libcap-ng-devel
 BuildRequires:	libedit-devel >= 2.11
+BuildRequires:	libfmt-devel >= 5.2.1
 BuildRequires:	libfuse3-devel >= 3
 %{?with_rdma:BuildRequires:	libibverbs-devel}
 BuildRequires:	libltdl-devel
 BuildRequires:	libnl-devel >= 3.2
 %{?with_rdma:BuildRequires:	librdmacm-devel}
-# not released yet?
-#BuildRequires:	librdkafka-devel >= 1.9.2
+BuildRequires:	librdkafka-devel >= 0.9.2
 BuildRequires:	libstdc++-devel >= 6:7
-%{?with_tcmalloc:BuildRequires:	libtcmalloc-devel}
+%{?with_tcmalloc:BuildRequires:	libtcmalloc-devel >= 2.6.2}
 BuildRequires:	libtool >= 2:1.5
 BuildRequires:	libuuid-devel
 BuildRequires:	libxml2-devel >= 2.0
@@ -106,17 +107,15 @@ BuildRequires:	openssl-devel >= 1.1
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 %{?with_pmem:BuildRequires:	pmdk-devel}
-BuildRequires:	python >= 1:2.7
-BuildRequires:	python-devel >= 1:2.7
-BuildRequires:	python-Cython
+BuildRequires:	python3 >= 1:3.2
 BuildRequires:	python3-devel >= 1:3.2
 BuildRequires:	python3-Cython
 BuildRequires:	rabbitmq-c-devel
-%{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.8}
+%{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.14}
 BuildRequires:	rpmbuild(macros) >= 1.671
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
-BuildRequires:	sphinx-pdg-2 >= 1.0
+BuildRequires:	sphinx-pdg-3 >= 1.0
 BuildRequires:	udev-devel
 #BuildRequires:	virtualenv  for tests
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
@@ -131,8 +130,8 @@ Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
 Requires:	lz4 >= 1:1.7
-Requires:	python-%{name} = %{version}-%{release}
-%{?with_system_rocksdb:Requires:	rocksdb >= 5.8}
+Requires:	python3-%{name} = %{version}-%{release}
+%{?with_system_rocksdb:Requires:	rocksdb >= 5.14}
 Requires:	systemd-units >= 38
 Requires:	zstd >= 1.4.4
 Obsoletes:	gcephtool < 0.51
@@ -153,6 +152,8 @@ dobrej wydajności, wiarygodności i skalowalności.
 Summary:	Ceph shared libraries
 Summary(pl.UTF-8):	Biblioteki współdzielone Cepha
 Group:		Libraries
+Requires:	libfmt >= 5.2.1
+Requires:	librdkafka >= 0.9.2
 Requires:	openssl >= 1.1
 
 %description libs
@@ -169,7 +170,7 @@ Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
 Requires:	boost-devel >= 1.67
 Requires:	curl-devel
-Requires:	expat-devel
+Requires:	expat-devel >= 1.95
 Requires:	fcgi-devel
 Requires:	nss-devel >= 3
 Requires:	leveldb-devel >= 1.2
@@ -189,23 +190,12 @@ Ceph.
 Ten pakiet zawiera pliki nagłówkowe potrzebne do tworzenia programów
 wykorzystujących Cepha.
 
-%package -n python-ceph
-Summary:	Ceph Python 2 bindings
-Summary(pl.UTF-8):	Wiązania Pythona 2 do bibliotek Cepha
-Group:		Development/Languages/Python
-Requires:	%{name}-libs = %{version}-%{release}
-
-%description -n python-ceph
-Ceph Python 2 bindings.
-
-%description -n python-ceph -l pl.UTF-8
-Wiązania Pythona 2 do bibliotek Cepha.
-
 %package -n python3-ceph
 Summary:	Ceph Python 3 bindings
 Summary(pl.UTF-8):	Wiązania Pythona 3 do bibliotek Cepha
 Group:		Development/Languages/Python
 Requires:	%{name}-libs = %{version}-%{release}
+Obsoletes:	python-ceph < 15
 
 %description -n python3-ceph
 Ceph Python 3 bindings.
@@ -331,7 +321,7 @@ cd build
 	-DALLOCATOR="%{?with_tcmalloc:tcmalloc}%{!?with_tcmalloc:libc}" \
 	-DFIO_INCLUDE_DIR=/usr/include/fio \
 	-DPYTHON=%{__python} \
-	-DSPHINX_BUILD=/usr/bin/sphinx-build-2 \
+	-DSPHINX_BUILD=/usr/bin/sphinx-build-3 \
 	%{!?with_babeltrace:-DWITH_BABELTRACE=OFF} \
 	%{?with_java:-DWITH_CEPHFS_JAVA=ON} \
 	%{?with_dpdk:-DWITH_DPDK=ON} \
@@ -350,7 +340,6 @@ cd build
 	%{?with_system_rocksdb:-DWITH_SYSTEM_ROCKSDB=ON} \
 	-DWITH_SYSTEM_ZSTD=ON \
 	-DWITH_SYSTEMD=ON \
-	%{?with_accelio:-DWITH_XIO=ON} \
 	%{?with_zfs:-DWITH_ZFS=ON} \
 	-DWITH_REENTRANT_STRSIGNAL=ON \
 	%{!?with_tests:-DWITH_TESTS=OFF}
@@ -433,6 +422,8 @@ fi
 %{systemdunitdir}/ceph-crash.service
 %{systemdunitdir}/ceph-fuse.target
 %{systemdunitdir}/ceph-fuse@.service
+%{systemdunitdir}/ceph-immutable-object-cache.target
+%{systemdunitdir}/ceph-immutable-object-cache@.service
 %{systemdunitdir}/ceph-mds.target
 %{systemdunitdir}/ceph-mds@.service
 %{systemdunitdir}/ceph-mgr.target
@@ -455,6 +446,8 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-crash
 %attr(755,root,root) %{_bindir}/ceph-dencoder
 %attr(755,root,root) %{_bindir}/ceph-diff-sorted
+%attr(755,root,root) %{_bindir}/ceph-erasure-code-tool
+%attr(755,root,root) %{_bindir}/ceph-immutable-object-cache
 %attr(755,root,root) %{_bindir}/ceph-kvstore-tool
 %attr(755,root,root) %{_bindir}/ceph-mds
 %attr(755,root,root) %{_bindir}/ceph-mgr
@@ -538,9 +531,11 @@ fi
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_lua.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_numops.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_otp.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_queue.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rbd.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_refcount.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw_gc.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_sdk.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_timeindex.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_user.so*
@@ -559,6 +554,7 @@ fi
 %{_mandir}/man8/ceph-dencoder.8*
 %{_mandir}/man8/ceph-deploy.8*
 %{_mandir}/man8/ceph-diff-sorted.8*
+%{_mandir}/man8/ceph-immutable-object-cache.8*
 %{_mandir}/man8/ceph-kvstore-tool.8*
 %{_mandir}/man8/ceph-mds.8*
 %{_mandir}/man8/ceph-mon.8*
@@ -569,6 +565,7 @@ fi
 %{_mandir}/man8/ceph-syn.8*
 %{_mandir}/man8/ceph-volume.8*
 %{_mandir}/man8/ceph-volume-systemd.8*
+%{_mandir}/man8/cephadm.8*
 %{_mandir}/man8/crushtool.8*
 %{_mandir}/man8/librados-config.8*
 %{_mandir}/man8/monmaptool.8*
@@ -611,6 +608,8 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librados.so.2
 %attr(755,root,root) %{_libdir}/librados_tp.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librados_tp.so.2
+%attr(755,root,root) %{_libdir}/libradosgw.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libradosgw.so.2
 %attr(755,root,root) %{_libdir}/libradosstriper.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libradosstriper.so.1
 %attr(755,root,root) %{_libdir}/librbd.so.*.*.*
@@ -619,14 +618,12 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librbd_tp.so.1
 %attr(755,root,root) %{_libdir}/librgw.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librgw.so.2
-%attr(755,root,root) %{_libdir}/librgw_admin_user.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/librgw_admin_user.so.0
 %attr(755,root,root) %{_libdir}/librgw_op_tp.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librgw_op_tp.so.1
 %attr(755,root,root) %{_libdir}/librgw_rados_tp.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librgw_rados_tp.so.1
 %dir %{_libdir}/ceph
-%attr(755,root,root) %{_libdir}/ceph/libceph-common.so.0
+%attr(755,root,root) %{_libdir}/ceph/libceph-common.so.2
 
 %files devel
 %defattr(644,root,root,755)
@@ -635,11 +632,11 @@ fi
 %attr(755,root,root) %{_libdir}/libosd_tp.so
 %attr(755,root,root) %{_libdir}/librados.so
 %attr(755,root,root) %{_libdir}/librados_tp.so
+%attr(755,root,root) %{_libdir}/libradosgw.so
 %attr(755,root,root) %{_libdir}/libradosstriper.so
 %attr(755,root,root) %{_libdir}/librbd.so
 %attr(755,root,root) %{_libdir}/librbd_tp.so
 %attr(755,root,root) %{_libdir}/librgw.so
-%attr(755,root,root) %{_libdir}/librgw_admin_user.so
 %attr(755,root,root) %{_libdir}/librgw_op_tp.so
 %attr(755,root,root) %{_libdir}/librgw_rados_tp.so
 %{_includedir}/cephfs
@@ -647,29 +644,16 @@ fi
 %{_includedir}/radosstriper
 %{_includedir}/rbd
 
-%files -n python-ceph
-%defattr(644,root,root,755)
-%attr(755,root,root) %{py_sitedir}/cephfs.so
-%attr(755,root,root) %{py_sitedir}/rados.so
-%attr(755,root,root) %{py_sitedir}/rbd.so
-%attr(755,root,root) %{py_sitedir}/rgw.so
-%{py_sitedir}/ceph_volume
-%{py_sitedir}/ceph_volume-1.0.0-py*.egg-info
-%{py_sitedir}/cephfs-2.0.0-py*.egg-info
-%{py_sitedir}/rados-2.0.0-py*.egg-info
-%{py_sitedir}/rbd-2.0.0-py*.egg-info
-%{py_sitedir}/rgw-2.0.0-py*.egg-info
-%{py_sitescriptdir}/ceph_argparse.py[co]
-%{py_sitescriptdir}/ceph_daemon.py[co]
-%{py_sitescriptdir}/ceph_volume_client.py[co]
-
-%if 0
 %files -n python3-ceph
 %defattr(644,root,root,755)
 %attr(755,root,root) %{py3_sitedir}/cephfs.cpython-*.so
 %attr(755,root,root) %{py3_sitedir}/rados.cpython-*.so
 %attr(755,root,root) %{py3_sitedir}/rbd.cpython-*.so
 %attr(755,root,root) %{py3_sitedir}/rgw.cpython-*.so
+%{py3_sitedir}/ceph
+%{py3_sitedir}/ceph-1.0.0-py*.egg-info
+%{py3_sitedir}/ceph_volume
+%{py3_sitedir}/ceph_volume-1.0.0-py*.egg-info
 %{py3_sitedir}/cephfs-2.0.0-py*.egg-info
 %{py3_sitedir}/rados-2.0.0-py*.egg-info
 %{py3_sitedir}/rbd-2.0.0-py*.egg-info
@@ -680,7 +664,6 @@ fi
 %{py3_sitescriptdir}/__pycache__/ceph_argparse.cpython-*.py[co]
 %{py3_sitescriptdir}/__pycache__/ceph_daemon.cpython-*.py[co]
 %{py3_sitescriptdir}/__pycache__/ceph_volume_client.cpython-*.py[co]
-%endif
 
 %if %{with java}
 %files -n java-cephfs

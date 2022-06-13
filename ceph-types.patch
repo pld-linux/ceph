@@ -1,14 +1,3 @@
---- ceph-12.2.13/src/osd/PrimaryLogPG.cc.orig	2020-01-30 21:52:36.000000000 +0100
-+++ ceph-12.2.13/src/osd/PrimaryLogPG.cc	2020-05-28 12:18:59.914600378 +0200
-@@ -1582,7 +1582,7 @@
-   if (limit != eversion_t() &&
-       limit != pg_trim_to &&
-       pg_log.get_log().approx_size() > target) {
--    size_t num_to_trim = std::min(pg_log.get_log().approx_size() - target,
-+    size_t num_to_trim = std::min<uint64_t>(pg_log.get_log().approx_size() - target,
-                              cct->_conf->osd_pg_log_trim_max);
-     if (num_to_trim < cct->_conf->osd_pg_log_trim_min &&
-         cct->_conf->osd_pg_log_trim_max >= cct->_conf->osd_pg_log_trim_min) {
 --- ceph-12.2.13/src/os/filestore/FileStore.cc.orig	2020-01-30 21:52:36.000000000 +0100
 +++ ceph-12.2.13/src/os/filestore/FileStore.cc	2020-06-03 21:27:26.387210803 +0200
 @@ -922,7 +922,7 @@
@@ -29,40 +18,6 @@
        !g_ceph_context->check_experimental_feature_enabled("btrfs")) {
      derr <<__FUNC__ << ": deprecated btrfs support is not enabled" << dendl;
      return -EPERM;
---- ceph-13.2.10/src/rgw/rgw_client_io_filters.h.orig	2020-04-23 18:32:31.000000000 +0200
-+++ ceph-13.2.10/src/rgw/rgw_client_io_filters.h	2021-09-22 17:02:54.573378159 +0200
-@@ -291,7 +291,7 @@ public:
-       // extensions/trailing headers.
-       char chunk_size[32];
-       const auto chunk_size_len = snprintf(chunk_size, sizeof(chunk_size),
--                                           "%" PRIx64 "\r\n", len);
-+                                           "%zx\r\n", len);
-       size_t sent = 0;
- 
-       sent += DecoratedRestfulClient<T>::send_body(chunk_size, chunk_size_len);
---- ceph-14.2.22/src/include/buffer.h.orig	2021-06-30 00:09:10.000000000 +0200
-+++ ceph-14.2.22/src/include/buffer.h	2022-06-10 22:04:13.923155571 +0200
-@@ -737,7 +737,9 @@ inline namespace v14_2_0 {
- 
-       void advance(int o) = delete;
-       void advance(unsigned o);
-+#ifdef __LP64__
-       void advance(size_t o) { advance(static_cast<unsigned>(o)); }
-+#endif
-       void seek(unsigned o);
-       char operator*() const;
-       iterator_impl& operator++();
---- ceph-14.2.22/src/common/config_values.h.orig	2021-06-30 00:09:10.000000000 +0200
-+++ ceph-14.2.22/src/common/config_values.h	2022-06-11 12:41:03.898142864 +0200
-@@ -49,7 +49,7 @@ public:
- #define OPTION_OPT_U32(name) uint64_t name;
- #define OPTION_OPT_U64(name) uint64_t name;
- #define OPTION_OPT_UUID(name) uuid_d name;
--#define OPTION_OPT_SIZE(name) size_t name;
-+#define OPTION_OPT_SIZE(name) uint64_t name;
- #define OPTION(name, ty)       \
-   public:                      \
-     OPTION_##ty(name)          
 --- ceph-14.2.22/src/compressor/snappy/SnappyCompressor.h.orig	2021-06-30 00:09:10.000000000 +0200
 +++ ceph-14.2.22/src/compressor/snappy/SnappyCompressor.h	2022-06-11 13:56:24.966983465 +0200
 @@ -96,7 +96,7 @@ class SnappyCompressor : public Compress
@@ -96,35 +51,6 @@
    };
    alloc->dump(iterated_allocation);
    return total;
---- ceph-14.2.22/src/mds/PurgeQueue.cc.orig	2021-06-30 00:09:10.000000000 +0200
-+++ ceph-14.2.22/src/mds/PurgeQueue.cc	2022-06-11 19:37:11.086217333 +0200
-@@ -499,7 +499,7 @@ void PurgeQueue::_execute_item(
- 
-   in_flight[expire_to] = item;
-   logger->set(l_pq_executing, in_flight.size());
--  files_high_water = std::max(files_high_water, in_flight.size());
-+  files_high_water = std::max<uint64_t>(files_high_water, in_flight.size());
-   logger->set(l_pq_executing_high_water, files_high_water);
-   auto ops = _calculate_ops(item);
-   ops_in_flight += ops;
-@@ -577,7 +577,7 @@ void PurgeQueue::_execute_item(
-     logger->set(l_pq_executing_ops_high_water, ops_high_water);
-     in_flight.erase(expire_to);
-     logger->set(l_pq_executing, in_flight.size());
--    files_high_water = std::max(files_high_water, in_flight.size());
-+    files_high_water = std::max<uint64_t>(files_high_water, in_flight.size());
-     logger->set(l_pq_executing_high_water, files_high_water);
-     return;
-   }
-@@ -654,7 +654,7 @@ void PurgeQueue::_execute_item_complete(
- 
-   in_flight.erase(iter);
-   logger->set(l_pq_executing, in_flight.size());
--  files_high_water = std::max(files_high_water, in_flight.size());
-+  files_high_water = std::max<uint64_t>(files_high_water, in_flight.size());
-   logger->set(l_pq_executing_high_water, files_high_water);
-   dout(10) << "in_flight.size() now " << in_flight.size() << dendl;
- 
 --- ceph-14.2.22/src/client/fuse_ll.cc.orig	2021-06-30 00:09:10.000000000 +0200
 +++ ceph-14.2.22/src/client/fuse_ll.cc	2022-06-11 20:41:03.452122291 +0200
 @@ -192,7 +192,7 @@ static void fuse_ll_lookup(fuse_req_t re
@@ -136,3 +62,43 @@
  {
    CephFuse::Handle *cfuse = fuse_ll_req_prepare(req);
    cfuse->client->ll_forget(cfuse->iget(ino), nlookup+1);
+--- ceph-15.2.16/src/tools/rbd_mirror/image_replayer/snapshot/Replayer.cc.orig	2022-03-01 07:44:29.000000000 +0100
++++ ceph-15.2.16/src/tools/rbd_mirror/image_replayer/snapshot/Replayer.cc	2022-06-13 06:26:31.761657298 +0200
+@@ -253,7 +253,7 @@ bool Replayer<I>::get_replay_status(std:
+ 
+   json_spirit::mObject root_obj;
+   root_obj["replay_state"] = replay_state;
+-  root_obj["remote_snapshot_timestamp"] = remote_snap_info->timestamp.sec();
++  root_obj["remote_snapshot_timestamp"] = static_cast<int64_t>(remote_snap_info->timestamp.sec());
+ 
+   auto matching_remote_snap_id = util::compute_remote_snap_id(
+     m_state_builder->local_image_ctx->image_lock,
+@@ -268,7 +268,7 @@ bool Replayer<I>::get_replay_status(std:
+     // the local snapshot would just be the time the snapshot was
+     // synced and not the consistency point in time.
+     root_obj["local_snapshot_timestamp"] =
+-      matching_remote_snap_it->second.timestamp.sec();
++      static_cast<int64_t>(matching_remote_snap_it->second.timestamp.sec());
+   }
+ 
+   matching_remote_snap_it = m_state_builder->remote_image_ctx->snap_info.find(
+@@ -276,7 +276,7 @@ bool Replayer<I>::get_replay_status(std:
+   if (m_remote_snap_id_end != CEPH_NOSNAP &&
+       matching_remote_snap_it !=
+         m_state_builder->remote_image_ctx->snap_info.end()) {
+-    root_obj["syncing_snapshot_timestamp"] = remote_snap_info->timestamp.sec();
++    root_obj["syncing_snapshot_timestamp"] = static_cast<int64_t>(remote_snap_info->timestamp.sec());
+     root_obj["syncing_percent"] = static_cast<uint64_t>(
+         100 * m_local_mirror_snap_ns.last_copied_object_number /
+         static_cast<float>(std::max<uint64_t>(1U, m_local_object_count)));
+--- ceph-15.2.16/src/librbd/object_map/DiffRequest.cc.orig	2022-03-01 07:44:29.000000000 +0100
++++ ceph-15.2.16/src/librbd/object_map/DiffRequest.cc	2022-06-13 06:09:45.790195571 +0200
+@@ -187,7 +187,7 @@ void DiffRequest<I>::handle_load_object_
+     m_object_map.resize(m_object_diff_state->size());
+   }
+ 
+-  uint64_t overlap = std::min(m_object_map.size(), prev_object_diff_state_size);
++  uint64_t overlap = std::min<uint64_t>(m_object_map.size(), prev_object_diff_state_size);
+   auto it = m_object_map.begin();
+   auto overlap_end_it = it + overlap;
+   auto diff_it = m_object_diff_state->begin();

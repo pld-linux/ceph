@@ -1,8 +1,12 @@
---- ceph-13.2.10/src/test/fio/CMakeLists.txt.orig	2020-01-30 21:52:36.000000000 +0100
-+++ ceph-13.2.10/src/test/fio/CMakeLists.txt	2020-06-05 06:18:00.642074789 +0200
-@@ -18,4 +18,4 @@ if(WITH_FIO)
-   add_dependencies(fio_ceph_objectstore fio_ext)
+--- ceph-15.2.16/src/test/fio/CMakeLists.txt.orig	2022-06-12 19:33:32.012668509 +0200
++++ ceph-15.2.16/src/test/fio/CMakeLists.txt	2022-06-12 19:35:24.095394638 +0200
+@@ -27,7 +27,7 @@ if(WITH_FIO)
  endif()
+ 
  target_link_libraries(fio_ceph_objectstore os global)
 -install(TARGETS fio_ceph_objectstore DESTINATION lib)
 +install(TARGETS fio_ceph_objectstore DESTINATION lib${LIB_SUFFIX})
+ 
+ target_link_libraries(fio_ceph_messenger os global)
+-install(TARGETS fio_ceph_messenger DESTINATION lib)
++install(TARGETS fio_ceph_messenger DESTINATION lib${LIB_SUFFIX})
