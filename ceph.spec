@@ -1,10 +1,10 @@
 # TODO:
+# - libzbd bluestore backend? (WITH_ZBD=ON, BR: libzbd-devel)
 # - bluefs? (WITH_BLUEFS=ON)
 # - QATZIP? (WITH_QATZIP=ON, BR: qatzip-devel)
 # - brotli? (WITH_BROTLI=ON, uses internal brotli as downloaded subproject)
 # - seastar (WITH_SEASTAR=ON, BR: c-ares-devel >= 1.13.0)
-# - MGR_PYTHON_VERSION=3?
-# - proper init scripts if non-systemd boot is too be supported
+# - proper init scripts if non-systemd boot is to be supported
 #   (upstream scripts seem overcomplicated and hardly useful)
 # - run as non-root user
 # - build selinux policy (-DWITH_SELINUX=ON)
@@ -16,17 +16,17 @@
 %bcond_without	java		# Java binding
 %bcond_with	angular		# Angular-based mgr/dashboard frontend (built using npm, too outdated currently)
 %bcond_with	dpdk		# DPDK messaging
-# build fails with:
-# ceph-15.2.16/src/rgw/rgw_fcgi_process.cc:92:53: error: 'class rgw::sal::RGWRadosStore' has no member named 'get_new_req_id'
+# 15.2.x/16.2.x build fails with:
+# src/rgw/rgw_fcgi_process.cc:92:53: error: 'class rgw::sal::RGWRadosStore' has no member named 'get_new_req_id'
 %bcond_with	fcgi		# RADOS Gateway FCGI frontend
-%bcond_with	fio		# FIO engines support
+%bcond_with	fio		# FIO engines support (16.x: downloads fio as internal subproject)
 %bcond_with	kerberos	# GSSAPI/KRB5 support
 %bcond_without	pmem		# PMDK (persistent memory) support
 %bcond_without	rdma		# RDMA transport support
 %bcond_with	spdk		# Ceph SPDK support (DPDK based)
 %bcond_without	system_rocksdb	# system RocksDB storage support
-# temporarily disabled: "fallthrough" define from OpenZFS's spl breaks "[[fallthrough]]" in src/include/blobhash.h
-%bcond_with	zfs		# ZFS support
+# 15.2.x/16.2.x: "fallthrough" define from OpenZFS's spl breaks "[[fallthrough]]" in src/include/blobhash.h
+%bcond_with	zfs		# ZFS support [not ready for zfs 0.8.x]
 %bcond_without	lttng		# LTTng tracing
 %bcond_without	babeltrace	# Babeltrace traces support
 %bcond_without	tcmalloc	# tcmalloc allocator
@@ -42,62 +42,73 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	15.2.16
+Version:	16.2.9
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	10461364fea1f21843f107548a901905
+# Source0-md5:	d823195299c0950659343fc6ad39aa1b
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
-Patch0:		%{name}-init-fix.patch
-Patch2:		boost.patch
-Patch3:		%{name}-python.patch
-Patch4:		%{name}-types.patch
-Patch5:		%{name}-tcmalloc.patch
-Patch7:		%{name}-fcgi.patch
-Patch8:		%{name}-fio.patch
-Patch9:		%{name}-zfs.patch
+Patch0:		%{name}-python.patch
+Patch1:		%{name}-fio.patch
+Patch2:		%{name}-fcgi.patch
+Patch3:		string-includes.patch
+Patch4:		no-virtualenvs.patch
+Patch5:		system-zstd.patch
+Patch6:		types.patch
+Patch7:		use-provided-cpu-flag-values.patch
+Patch8:		ix86-no-asm.patch
+Patch9:		long-int-time_t.patch
+Patch10:	fuse3-api.patch
+Patch11:	%{name}-liburing.patch
 URL:		https://ceph.io/
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
-BuildRequires:	boost-devel >= 1.67
-BuildRequires:	boost-python3-devel >= 1.67
-BuildRequires:	cmake >= 3.10.2
+BuildRequires:	boost-devel >= 1.72
+BuildRequires:	boost-python3-devel >= 1.72
+BuildRequires:	cmake >= 3.22.2
+BuildRequires:	cryptsetup-devel >= 2.0.5
 BuildRequires:	curl-devel
 %if %{with dpdk} || %{with spdk}
 BuildRequires:	dpdk-devel
 %endif
+BuildRequires:	doxygen
 BuildRequires:	expat-devel >= 1.95
 %{?with_fcgi:BuildRequires:	fcgi-devel}
-%{?with_fio:BuildRequires:	fio-devel}
+%{?with_fio:BuildRequires:	fio-devel >= 3.15}
 BuildRequires:	gdbm-devel
 BuildRequires:	gperf
 %{?with_tcmalloc:BuildRequires:	gperftools-devel >= 2.6.2}
 %{?with_kerberos:BuildRequires:	heimdal-devel}
 %if %{with java}
 BuildRequires:	jdk
+BuildRequires:	jre-X11
 %endif
 BuildRequires:	keyutils-devel
-BuildRequires:	leveldb-devel >= 1.2
+BuildRequires:	leveldb-devel >= 1.23-2
 BuildRequires:	libaio-devel
 BuildRequires:	libatomic_ops
 BuildRequires:	libblkid-devel >= 2.17
 BuildRequires:	libcap-ng-devel
 BuildRequires:	libedit-devel >= 2.11
-BuildRequires:	libfmt-devel >= 5.2.1
+BuildRequires:	libfmt-devel >= 6.0.0
 BuildRequires:	libfuse3-devel >= 3
 %{?with_rdma:BuildRequires:	libibverbs-devel}
+BuildRequires:	libicu-devel >= 52.0
 BuildRequires:	libltdl-devel
 BuildRequires:	libnl-devel >= 3.2
-%{?with_rdma:BuildRequires:	librdmacm-devel}
 BuildRequires:	librdkafka-devel >= 0.9.2
+%{?with_rdma:BuildRequires:	librdmacm-devel}
 BuildRequires:	libstdc++-devel >= 6:7
 %{?with_tcmalloc:BuildRequires:	libtcmalloc-devel >= 2.6.2}
 BuildRequires:	libtool >= 2:1.5
+BuildRequires:	liburing-devel
 BuildRequires:	libuuid-devel
 BuildRequires:	libxml2-devel >= 2.0
 %{?with_lttng:BuildRequires:	lttng-ust-devel}
+BuildRequires:	lua-devel >= 5.3
 BuildRequires:	lz4-devel >= 1:1.7
+BuildRequires:	ncurses-devel
 %{?with_angular:BuildRequires:	npm}
 BuildRequires:	nspr-devel >= 4
 BuildRequires:	nss-devel >= 3
@@ -106,18 +117,19 @@ BuildRequires:	openldap-devel
 BuildRequires:	openssl-devel >= 1.1
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
-%{?with_pmem:BuildRequires:	pmdk-devel}
+%{?with_pmem:BuildRequires:	pmdk-devel >= 1.6.1}
 BuildRequires:	python3 >= 1:3.2
 BuildRequires:	python3-devel >= 1:3.2
+%{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
 BuildRequires:	python3-Cython
 BuildRequires:	rabbitmq-c-devel
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.14}
 BuildRequires:	rpmbuild(macros) >= 1.671
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
-BuildRequires:	sphinx-pdg-3 >= 1.0
+BuildRequires:	sphinx-pdg >= 4.4.0
+BuildRequires:	sqlite3-devel >= 3
 BuildRequires:	udev-devel
-#BuildRequires:	virtualenv  for tests
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
 BuildRequires:	xfsprogs-devel
 %ifarch %{x8664}
@@ -152,7 +164,7 @@ dobrej wydajności, wiarygodności i skalowalności.
 Summary:	Ceph shared libraries
 Summary(pl.UTF-8):	Biblioteki współdzielone Cepha
 Group:		Libraries
-Requires:	libfmt >= 5.2.1
+Requires:	libfmt >= 6.0.0
 Requires:	librdkafka >= 0.9.2
 Requires:	openssl >= 1.1
 
@@ -168,12 +180,12 @@ Summary(pl.UTF-8):	Pliki nagłówkowe bibliotek Cepha
 License:	LGPL v2.1
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
-Requires:	boost-devel >= 1.67
+Requires:	boost-devel >= 1.72
 Requires:	curl-devel
 Requires:	expat-devel >= 1.95
 Requires:	fcgi-devel
 Requires:	nss-devel >= 3
-Requires:	leveldb-devel >= 1.2
+Requires:	leveldb-devel >= 1.23-2
 Requires:	libatomic_ops
 Requires:	libblkid-devel >= 2.17
 Requires:	libstdc++-devel >= 6:7
@@ -289,17 +301,26 @@ uruchamiania demonów.
 %prep
 %setup -q
 %patch0 -p1
-%patch2 -p0
+%patch1 -p1
+%patch2 -p1
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%ifarch %{ix86}
 %patch9 -p1
+%endif
+%patch10 -p1
+%patch11 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
 	src/rgw/rgw-{gap,orphan}-list
+
+%{__sed} -i -e '1s,/usr/bin/awk,/bin/awk,' \
+	src/rgw/rgw-gap-list-comparator
 
 %if %{with angular}
 # stub virtualenv with npm for src/pybind/mgr/dashboard bootstrapping
@@ -310,39 +331,55 @@ deactivate() {
     unset -f deactivate
 }
 EOF
-# 4.12.0 no longer downloadable, adjust to nearest existing
-%{__sed} -i -e '/"node-sass"/ s/4\.12\.0/4.13.1/' src/pybind/mgr/dashboard/frontend/package-lock.json
 %endif
 
 %build
 install -d build
 cd build
 %cmake .. \
+%ifarch %{x8664} %{ix86} x32
+	-DHAVE_INTEL_SSE=1 \
+%endif
+%ifarch %{x8664} x32
+	-DHAVE_INTEL_SSE2=1 \
+	-DHAVE_INTEL_SSE3=1 \
+	-DHAVE_INTEL_SSSE3=1 \
+	-DHAVE_INTEL_PCLMUL=1 \
+	-DHAVE_INTEL_SSE4_1=1 \
+	-DHAVE_INTEL_SSE4_2=1 \
+%endif
 	-DALLOCATOR="%{?with_tcmalloc:tcmalloc}%{!?with_tcmalloc:libc}" \
 	-DFIO_INCLUDE_DIR=/usr/include/fio \
-	-DPYTHON=%{__python} \
-	-DSPHINX_BUILD=/usr/bin/sphinx-build-3 \
+	%{?with_java:-DJAVA_HOME:PATH=%{java_home}} \
+	-DPYTHON=%{__python3} \
 	%{!?with_babeltrace:-DWITH_BABELTRACE=OFF} \
+%if %{with pmem}
+	-DWITH_BLUESTORE_PMEM=ON \
+	-DWITH_SYSTEM_PMDK:BOOL=ON \
+%endif
 	%{?with_java:-DWITH_CEPHFS_JAVA=ON} \
 	%{?with_dpdk:-DWITH_DPDK=ON} \
 	%{?with_fio:-DWITH_FIO=ON} \
+	%{?with_kerberos:-DWITH_GSSAPI=ON} \
 	%{!?with_lttng:-DWITH_LTTNG=OFF} \
+	-DLUA_INCLUDE_DIR=%{_includedir}/lua \
+	-DSPHINX_BUILD=/usr/bin/sphinx-build \
 	-DWITH_LZ4=ON \
 	%{!?with_angular:-DWITH_MGR_DASHBOARD_FRONTEND=OFF} \
 	-DWITH_OCF=ON \
-	%{?with_pmem:-DWITH_PMEM=ON} \
+	-DWITH_PYTHON3=%{py3_ver} \
 	%{?with_fcgi:-DWITH_RADOSGW_FCGI_FRONTEND=ON} \
-	%{?with_spdk:-DWITH_SPDK=ON} \
 	%{!?with_rdma:-DWITH_RDMA=OFF} \
+	-DWITH_REENTRANT_STRSIGNAL=ON \
+	%{?with_spdk:-DWITH_SPDK=ON} \
 	-DWITH_SYSTEM_BOOST=ON \
-	%{?with_fio:-DWITH_SYSTEM_FIO=ON} \
+	-DWITH_SYSTEM_LIBURING=ON \
 	%{?with_angular:-DWITH_SYSTEM_NPM=ON} \
 	%{?with_system_rocksdb:-DWITH_SYSTEM_ROCKSDB=ON} \
 	-DWITH_SYSTEM_ZSTD=ON \
 	-DWITH_SYSTEMD=ON \
-	%{?with_zfs:-DWITH_ZFS=ON} \
-	-DWITH_REENTRANT_STRSIGNAL=ON \
-	%{!?with_tests:-DWITH_TESTS=OFF}
+	%{!?with_tests:-DWITH_TESTS=OFF} \
+	%{?with_zfs:-DWITH_ZFS=ON}
 
 %{__make}
 
@@ -366,17 +403,14 @@ cp -p %{SOURCE1} $RPM_BUILD_ROOT/etc/sysconfig/ceph
 ln -sf /dev/null $RPM_BUILD_ROOT%{systemdunitdir}/ceph.service
 cp -p %{SOURCE3} $RPM_BUILD_ROOT%{systemdtmpfilesdir}/ceph.conf
 
-%py_comp $RPM_BUILD_ROOT%{py_sitescriptdir}
-%py_ocomp $RPM_BUILD_ROOT%{py_sitescriptdir}
-%py_postclean
+%if %{without tests}
+%{__rm} $RPM_BUILD_ROOT%{_javadir}/libcephfs-test.jar
+%{__rm} -r $RPM_BUILD_ROOT%{py3_sitescriptdir}/{ceph,ceph_volume}/tests
+%endif
 
 %py3_comp $RPM_BUILD_ROOT%{py3_sitescriptdir}
 %py3_ocomp $RPM_BUILD_ROOT%{py3_sitescriptdir}
 
-%if %{with tests}
-# tests
-%{__rm} $RPM_BUILD_ROOT%{_bindir}/ceph_test_*
-%endif
 # packaged as %doc
 %{__rm} $RPM_BUILD_ROOT%{_docdir}/sample.ceph.conf
 %if %{with angular}
@@ -435,6 +469,8 @@ fi
 %{systemdunitdir}/ceph-rbd-mirror.target
 %{systemdunitdir}/ceph-rbd-mirror@.service
 %{systemdunitdir}/ceph-volume@.service
+%{systemdunitdir}/cephfs-mirror.target
+%{systemdunitdir}/cephfs-mirror@.service
 %{systemdunitdir}/rbdmap.service
 %{systemdtmpfilesdir}/ceph.conf
 %dir %{_sysconfdir}/ceph
@@ -462,7 +498,9 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-syn
 %attr(755,root,root) %{_bindir}/cephfs-data-scan
 %attr(755,root,root) %{_bindir}/cephfs-journal-tool
+%attr(755,root,root) %{_bindir}/cephfs-mirror
 %attr(755,root,root) %{_bindir}/cephfs-table-tool
+%attr(755,root,root) %{_bindir}/cephfs-top
 %attr(755,root,root) %{_bindir}/crushtool
 %attr(755,root,root) %{_bindir}/librados-config
 %attr(755,root,root) %{_bindir}/monmaptool
@@ -498,9 +536,9 @@ fi
 %ifarch %{x8664}
 %attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_isal.so*
 %endif
-%attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_openssl.so
+%attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_openssl.so*
 %dir %{_libdir}/ceph/erasure-code
-%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_clay.so
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_clay.so*
 %ifarch %{x8664}
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_isa.so*
 %endif
@@ -512,17 +550,20 @@ fi
 %ifarch %{ix86} %{x8664} x32
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse3.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_jerasure_sse4.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_sse3.so*
+%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_sse4.so*
 %endif
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_lrc.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_generic.so*
-%ifarch %{ix86} %{x8664} x32
-%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_sse3.so*
-%attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_sse4.so*
-%endif
+%dir %{_libdir}/ceph/librbd
+%attr(755,root,root) %{_libdir}/ceph/librbd/libceph_librbd_parent_cache.so*
 %dir %{_libdir}/rados-classes
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_2pc_queue.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_cas.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_cephfs.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_cmpomap.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_fifo.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_hello.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_journal.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
@@ -566,10 +607,13 @@ fi
 %{_mandir}/man8/ceph-volume.8*
 %{_mandir}/man8/ceph-volume-systemd.8*
 %{_mandir}/man8/cephadm.8*
+%{_mandir}/man8/cephfs-mirror.8*
+%{_mandir}/man8/cephfs-top.8*
 %{_mandir}/man8/crushtool.8*
 %{_mandir}/man8/librados-config.8*
 %{_mandir}/man8/monmaptool.8*
 %{_mandir}/man8/mount.ceph.8*
+%{_mandir}/man8/mount.fuse.ceph.8*
 %{_mandir}/man8/osdmaptool.8*
 %{_mandir}/man8/rados.8*
 %{_mandir}/man8/rbd.8*
@@ -619,9 +663,10 @@ fi
 %attr(755,root,root) %{_libdir}/librgw.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librgw.so.2
 %attr(755,root,root) %{_libdir}/librgw_op_tp.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/librgw_op_tp.so.1
+%attr(755,root,root) %ghost %{_libdir}/librgw_op_tp.so.2
 %attr(755,root,root) %{_libdir}/librgw_rados_tp.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/librgw_rados_tp.so.1
+%attr(755,root,root) %ghost %{_libdir}/librgw_rados_tp.so.2
+%attr(755,root,root) %{_libdir}/libcephsqlite.so
 %dir %{_libdir}/ceph
 %attr(755,root,root) %{_libdir}/ceph/libceph-common.so.2
 
@@ -643,6 +688,7 @@ fi
 %{_includedir}/rados
 %{_includedir}/radosstriper
 %{_includedir}/rbd
+%{_includedir}/libcephsqlite.h
 
 %files -n python3-ceph
 %defattr(644,root,root,755)
@@ -650,20 +696,17 @@ fi
 %attr(755,root,root) %{py3_sitedir}/rados.cpython-*.so
 %attr(755,root,root) %{py3_sitedir}/rbd.cpython-*.so
 %attr(755,root,root) %{py3_sitedir}/rgw.cpython-*.so
-%{py3_sitedir}/ceph
-%{py3_sitedir}/ceph-1.0.0-py*.egg-info
-%{py3_sitedir}/ceph_volume
-%{py3_sitedir}/ceph_volume-1.0.0-py*.egg-info
 %{py3_sitedir}/cephfs-2.0.0-py*.egg-info
 %{py3_sitedir}/rados-2.0.0-py*.egg-info
 %{py3_sitedir}/rbd-2.0.0-py*.egg-info
 %{py3_sitedir}/rgw-2.0.0-py*.egg-info
-%{py3_sitescriptdir}/ceph_argparse.py
-%{py3_sitescriptdir}/ceph_daemon.py
-%{py3_sitescriptdir}/ceph_volume_client.py
-%{py3_sitescriptdir}/__pycache__/ceph_argparse.cpython-*.py[co]
-%{py3_sitescriptdir}/__pycache__/ceph_daemon.cpython-*.py[co]
-%{py3_sitescriptdir}/__pycache__/ceph_volume_client.cpython-*.py[co]
+%{py3_sitescriptdir}/ceph_*.py
+%{py3_sitescriptdir}/__pycache__/ceph_*.py*
+%{py3_sitescriptdir}/ceph
+%{py3_sitescriptdir}/ceph_volume
+%{py3_sitescriptdir}/ceph-1.0.0-py*.egg-info
+%{py3_sitescriptdir}/ceph_volume-1.0.0-py*.egg-info
+%{py3_sitescriptdir}/cephfs_top-0.0.1-py*.egg-info
 
 %if %{with java}
 %files -n java-cephfs
@@ -672,7 +715,6 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/libcephfs_jni.so.1
 %attr(755,root,root) %{_libdir}/libcephfs_jni.so
 %{_javadir}/libcephfs.jar
-%{_javadir}/libcephfs-test.jar
 %endif
 
 %files fuse
@@ -699,7 +741,7 @@ fi
 %dir %{_prefix}/lib/ocf/resource.d/ceph
 %attr(755,root,root) %{_prefix}/lib/ocf/resource.d/ceph/rbd
 
-%if %{with test}
+%if %{with tests}
 %files test
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_bindir}/ceph-client-debug
@@ -733,6 +775,11 @@ fi
 %attr(755,root,root) %{_bindir}/ceph_tpbench
 %attr(755,root,root) %{_bindir}/ceph_xattr_bench
 %attr(755,root,root) %{_libdir}/ceph/ceph-monstore-update-crush.sh
+%{py3_sitedir}/ceph/tests
+%{py3_sitedir}/ceph_volume/tests
+%if %{with java}
+%{_javadir}/libcephfs-test.jar
+%endif
 %{_mandir}/man8/ceph-debugpack.8*
 %{_mandir}/man8/ceph-kvstore-tool.8*
 %endif

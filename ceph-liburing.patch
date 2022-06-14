@@ -1,0 +1,11 @@
+--- ceph-16.2.7/cmake/modules/Finduring.cmake.orig	2021-12-07 17:15:49.000000000 +0100
++++ ceph-16.2.7/cmake/modules/Finduring.cmake	2022-02-16 22:00:07.850162837 +0100
+@@ -5,7 +5,7 @@
+ # uring_FOUND - True if uring found.
+ 
+ find_path(URING_INCLUDE_DIR liburing.h)
+-find_library(URING_LIBRARIES liburing.a liburing)
++find_library(URING_LIBRARIES uring)
+ 
+ include(FindPackageHandleStandardArgs)
+ find_package_handle_standard_args(uring DEFAULT_MSG URING_LIBRARIES URING_INCLUDE_DIR)

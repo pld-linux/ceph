@@ -1,0 +1,23 @@
+--- ceph-16.2.7/src/json_spirit/json_spirit_value.h.orig	2021-12-07 17:15:49.000000000 +0100
++++ ceph-16.2.7/src/json_spirit/json_spirit_value.h	2022-02-13 10:26:48.023109513 +0100
+@@ -51,6 +51,7 @@
+         Value_impl( const Array&       value );
+         Value_impl( bool               value );
+         Value_impl( int                value );
++        Value_impl( long int           value );
+         Value_impl( boost::int64_t     value );
+         Value_impl( boost::uint64_t    value );
+         Value_impl( double             value );
+@@ -294,6 +295,12 @@
+     :   v_( static_cast< boost::int64_t >( value ) )
+     {
+     }
++
++    template< class Config >
++    Value_impl< Config >::Value_impl( long int value )
++    :   v_( static_cast< boost::int64_t >( value ) )
++    {
++    }
+ 
+     template< class Config >
+     Value_impl< Config >::Value_impl( boost::int64_t value )
