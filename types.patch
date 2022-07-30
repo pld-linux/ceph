@@ -1,21 +1,3 @@
---- ceph-16.2.7/src/log/LogClock.h~	2021-12-07 17:15:49.000000000 +0100
-+++ ceph-16.2.7/src/log/LogClock.h	2022-02-12 18:57:04.434978131 +0100
-@@ -8,14 +8,11 @@
- #include <chrono>
- #include <ctime>
- #include <sys/time.h>
-+#include <sys/types.h>
- 
- #include "include/ceph_assert.h"
- #include "common/ceph_time.h"
- 
--#ifndef suseconds_t
--typedef long suseconds_t;
--#endif
--
- namespace ceph {
- namespace logging {
- namespace _logclock {
 --- ceph-16.2.7/src/SimpleRADOSStriper.cc~	2021-12-07 17:15:49.000000000 +0100
 +++ ceph-16.2.7/src/SimpleRADOSStriper.cc	2022-02-12 21:59:28.261721940 +0100
 @@ -140,7 +140,7 @@
@@ -27,17 +9,6 @@
  {
    d(5) << size << dendl;
  
---- ceph-16.2.7/src/common/buffer.cc~	2021-12-07 17:15:49.000000000 +0100
-+++ ceph-16.2.7/src/common/buffer.cc	2022-02-12 19:45:24.576619502 +0100
-@@ -2272,7 +2272,7 @@
- 
- void ceph::buffer::list::page_aligned_appender::_refill(size_t len) {
-   const size_t alloc = \
--    std::max((size_t)min_alloc, (len + CEPH_PAGE_SIZE - 1) & CEPH_PAGE_MASK);
-+    std::max((size_t)min_alloc, (size_t)((len + CEPH_PAGE_SIZE - 1) & CEPH_PAGE_MASK));
-   auto new_back = \
-     ptr_node::create(buffer::create_page_aligned(alloc));
-   new_back->set_length(0);   // unused, so far.
 --- ceph-16.2.7/src/os/bluestore/BlueFS.cc~	2021-12-07 17:15:49.000000000 +0100
 +++ ceph-16.2.7/src/os/bluestore/BlueFS.cc	2022-02-12 21:40:54.182516511 +0100
 @@ -3799,7 +3799,7 @@
@@ -49,17 +20,6 @@
    };
    if (alloc[dev]) {
      alloc[dev]->dump(iterated_allocation);
---- ceph-16.2.7/src/s3select/include/s3select_functions.h~	2020-06-23 03:08:18.000000000 +0200
-+++ ceph-16.2.7/src/s3select/include/s3select_functions.h	2022-02-12 22:04:21.710093616 +0100
-@@ -585,7 +585,7 @@
-     {
-       boost::gregorian::date_period dp =
-         boost::gregorian::date_period( val_dt1.timestamp()->date(), val_dt2.timestamp()->date());
--      result->set_value( dp.length().days() );
-+      result->set_value( (int64_t)dp.length().days() );
-     }
-     else if (strcmp(val_date_part.str(), "hours") == 0)
-     {
 --- ceph-16.2.7/src/librbd/object_map/DiffRequest.cc.orig	2021-12-07 17:15:49.000000000 +0100
 +++ ceph-16.2.7/src/librbd/object_map/DiffRequest.cc	2022-02-12 22:17:55.163378523 +0100
 @@ -187,7 +187,7 @@

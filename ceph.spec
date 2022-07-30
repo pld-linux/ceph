@@ -42,25 +42,23 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	16.2.9
+Version:	17.2.2
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	d823195299c0950659343fc6ad39aa1b
+# Source0-md5:	739ca7bdbdb6463db94e869ad78826d7
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-python.patch
 Patch1:		%{name}-fio.patch
-Patch2:		%{name}-fcgi.patch
-Patch3:		string-includes.patch
+Patch2:		%{name}-cmake-static.patch
+Patch3:		%{name}-arrow-pld.patch
 Patch4:		no-virtualenvs.patch
-Patch5:		system-zstd.patch
 Patch6:		types.patch
 Patch7:		use-provided-cpu-flag-values.patch
 Patch8:		ix86-no-asm.patch
 Patch9:		long-int-time_t.patch
-Patch10:	fuse3-api.patch
 Patch11:	%{name}-liburing.patch
 URL:		https://ceph.io/
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -117,7 +115,7 @@ BuildRequires:	openldap-devel
 BuildRequires:	openssl-devel >= 1.1
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
-%{?with_pmem:BuildRequires:	pmdk-devel >= 1.6.1}
+%{?with_pmem:BuildRequires:	pmdk-devel >= 1.10.0}
 BuildRequires:	python3 >= 1:3.2
 BuildRequires:	python3-devel >= 1:3.2
 %{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
@@ -305,14 +303,12 @@ uruchamiania demonów.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
 %ifarch %{ix86}
 %patch9 -p1
 %endif
-%patch10 -p1
 %patch11 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
@@ -394,7 +390,6 @@ install -d $RPM_BUILD_ROOT%{_localstatedir}/{lib/ceph/{tmp,mon,osd,mds,mgr,rados
 
 # sanitize paths; no config options for cmake
 %{__mv} $RPM_BUILD_ROOT/etc/init.d $RPM_BUILD_ROOT/etc/rc.d
-%{__mv} $RPM_BUILD_ROOT%{_libexecdir}/systemd/system/* $RPM_BUILD_ROOT%{systemdunitdir}
 %{__mv} $RPM_BUILD_ROOT%{_sbindir}/mount.* $RPM_BUILD_ROOT/sbin
 
 cp -p src/logrotate.conf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/ceph
@@ -502,6 +497,7 @@ fi
 %attr(755,root,root) %{_bindir}/cephfs-mirror
 %attr(755,root,root) %{_bindir}/cephfs-table-tool
 %attr(755,root,root) %{_bindir}/cephfs-top
+%attr(755,root,root) %{_bindir}/crushdiff
 %attr(755,root,root) %{_bindir}/crushtool
 %attr(755,root,root) %{_bindir}/librados-config
 %attr(755,root,root) %{_bindir}/monmaptool
@@ -538,6 +534,12 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_isal.so*
 %endif
 %attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_openssl.so*
+%dir %{_libdir}/ceph/denc
+%attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-cephfs.so
+%attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-common.so
+%attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-osd.so
+%attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-rbd.so
+%attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-rgw.so
 %dir %{_libdir}/ceph/erasure-code
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_clay.so*
 %ifarch %{x8664}
@@ -567,7 +569,6 @@ fi
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_fifo.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_hello.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_journal.so*
-%attr(755,root,root) %{_libdir}/rados-classes/libcls_kvs.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_lock.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_log.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_lua.so*
@@ -579,6 +580,7 @@ fi
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw_gc.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_sdk.so*
+%attr(755,root,root) %{_libdir}/rados-classes/libcls_test_remote_reads.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_timeindex.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_user.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_version.so*
@@ -594,7 +596,6 @@ fi
 %{_mandir}/man8/ceph-conf.8*
 %{_mandir}/man8/ceph-create-keys.8*
 %{_mandir}/man8/ceph-dencoder.8*
-%{_mandir}/man8/ceph-deploy.8*
 %{_mandir}/man8/ceph-diff-sorted.8*
 %{_mandir}/man8/ceph-immutable-object-cache.8*
 %{_mandir}/man8/ceph-kvstore-tool.8*
@@ -610,6 +611,7 @@ fi
 %{_mandir}/man8/cephadm.8*
 %{_mandir}/man8/cephfs-mirror.8*
 %{_mandir}/man8/cephfs-top.8*
+%{_mandir}/man8/crushdiff.8*
 %{_mandir}/man8/crushtool.8*
 %{_mandir}/man8/librados-config.8*
 %{_mandir}/man8/monmaptool.8*

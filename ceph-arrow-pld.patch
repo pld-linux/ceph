@@ -1,0 +1,11 @@
+--- ceph-17.2.2/src/arrow/cpp/cmake_modules/SetupCxxFlags.cmake.orig	2021-11-10 03:04:48.000000000 +0100
++++ ceph-17.2.2/src/arrow/cpp/cmake_modules/SetupCxxFlags.cmake	2022-07-28 17:43:21.652954490 +0200
+@@ -626,7 +626,7 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "P
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_FLAGS_PROFILE_BUILD}")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS_PROFILE_BUILD}")
+ else()
+-  message(FATAL_ERROR "Unknown build type: ${CMAKE_BUILD_TYPE}")
++
+ endif()
+ 
+ message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
