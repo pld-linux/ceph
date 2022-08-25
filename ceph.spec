@@ -42,12 +42,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	17.2.2
+Version:	17.2.3
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	739ca7bdbdb6463db94e869ad78826d7
+# Source0-md5:	96f10fa942ec0db4008993cddaec88ec
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-python.patch
@@ -117,9 +117,10 @@ BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 %{?with_pmem:BuildRequires:	pmdk-devel >= 1.10.0}
 BuildRequires:	python3 >= 1:3.2
+BuildRequires:	python3-Cython
+BuildRequires:	python3-PyYAML
 BuildRequires:	python3-devel >= 1:3.2
 %{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
-BuildRequires:	python3-Cython
 BuildRequires:	rabbitmq-c-devel
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.14}
 BuildRequires:	rpmbuild(macros) >= 1.671
@@ -127,6 +128,8 @@ BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
 BuildRequires:	sphinx-pdg >= 4.4.0
 BuildRequires:	sqlite3-devel >= 3
+# >= 0.13.0 wanted, but seems to build with 0.11.0
+BuildRequires:	thrift-devel
 BuildRequires:	udev-devel
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
 BuildRequires:	xfsprogs-devel
@@ -376,6 +379,9 @@ cd build
 	-DWITH_SYSTEMD=ON \
 	%{!?with_tests:-DWITH_TESTS=OFF} \
 	%{?with_zfs:-DWITH_ZFS=ON}
+
+# some object files have missing dependencies on these, pregenerate to avoid global -j1
+%{__make} legacy-option-headers
 
 %{__make}
 

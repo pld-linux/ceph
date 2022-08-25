@@ -62,3 +62,39 @@
        for (auto &[peer, peer_replayer] : m_peer_replayers) {
          dout(10) << ": peer=" << peer << dendl;
          peer_replayer->remove_directory(dir_path);
+--- ceph-17.2.2/src/os/bluestore/BlueStore.cc.orig	2022-07-21 19:29:33.000000000 +0200
++++ ceph-17.2.2/src/os/bluestore/BlueStore.cc	2022-08-23 16:55:10.753944515 +0200
+@@ -18583,7 +18583,7 @@ int BlueStore::__restore_allocator(Alloc
+   uint64_t        extent_count       = 0;
+   uint64_t        extents_bytes_left = file_size - (header_size + trailer_size + sizeof(crc));
+   while (extents_bytes_left) {
+-    int req_bytes  = std::min(extents_bytes_left, sizeof(buffer));
++    uint64_t req_bytes  = std::min<uint64_t>(extents_bytes_left, sizeof(buffer));
+     int read_bytes = bluefs->read(p_handle.get(), offset, req_bytes, nullptr, (char*)buffer);
+     if (read_bytes != req_bytes) {
+       derr << "Failed bluefs->read()::read_bytes=" << read_bytes << ", req_bytes=" << req_bytes << dendl;
+--- ceph-17.2.2/src/rgw/store/dbstore/sqlite/sqliteDB.cc.orig	2022-07-21 19:29:33.000000000 +0200
++++ ceph-17.2.2/src/rgw/store/dbstore/sqlite/sqliteDB.cc	2022-08-24 06:15:01.162110603 +0200
+@@ -514,8 +514,10 @@ static int list_lc_head(const DoutPrefix
+ 
+   op.lc_head.index = (const char*)sqlite3_column_text(stmt, LCHeadIndex);
+   op.lc_head.head.marker = (const char*)sqlite3_column_text(stmt, LCHeadMarker);
+- 
+-  SQL_DECODE_BLOB_PARAM(dpp, stmt, LCHeadStartDate, op.lc_head.head.start_date, sdb);
++
++  { int64_t start_date;
++  SQL_DECODE_BLOB_PARAM(dpp, stmt, LCHeadStartDate, start_date, sdb);
++  op.lc_head.head.start_date = start_date; }
+ 
+   return 0;
+ }
+@@ -2773,7 +2775,8 @@ int SQLInsertLCHead::Bind(const DoutPref
+   SQL_BIND_TEXT(dpp, stmt, index, params->op.lc_head.head.marker.c_str(), sdb);
+ 
+   SQL_BIND_INDEX(dpp, stmt, index, p_params.op.lc_head.start_date.c_str(), sdb);
+-  SQL_ENCODE_BLOB_PARAM(dpp, stmt, index, params->op.lc_head.head.start_date, sdb);
++  { int64_t start_date = params->op.lc_head.head.start_date;
++  SQL_ENCODE_BLOB_PARAM(dpp, stmt, index, start_date, sdb); }
+ 
+ out:
+   return rc;

@@ -1,7 +1,7 @@
---- ceph-16.2.9/src/test/fio/CMakeLists.txt.orig	2022-05-18 21:51:52.000000000 +0200
-+++ ceph-16.2.9/src/test/fio/CMakeLists.txt	2022-06-14 18:58:25.354554233 +0200
-@@ -35,11 +35,11 @@ if(WITH_FIO)
- endif()
+--- ceph-17.2.2/src/test/fio/CMakeLists.txt.orig	2022-05-18 21:51:52.000000000 +0200
++++ ceph-17.2.2/src/test/fio/CMakeLists.txt	2022-06-14 18:58:25.354554233 +0200
+@@ -11,11 +11,11 @@ add_library(fio_librgw SHARED fio_librgw
+ target_link_libraries(fio_librgw rgw fio)
  
  target_link_libraries(fio_ceph_objectstore os global)
 -install(TARGETS fio_ceph_objectstore DESTINATION lib)
