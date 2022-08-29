@@ -1,0 +1,102 @@
+--- ceph-17.2.3/CMakeLists.txt.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/CMakeLists.txt	2022-08-28 14:39:36.852487766 +0200
+@@ -278,7 +278,7 @@ option(WITH_BLUEFS "libbluefs library" O
+ 
+ option(WITH_QAT "Enable Qat driver" OFF)
+ if(WITH_QAT)
+-  find_package(QatDrv REQUIRED COMPONENTS qat_s usdm_drv_s)
++  find_package(QatDrv REQUIRED COMPONENTS qat usdm)
+   set(HAVE_QATDRV $(QatDrv_FOUND))
+ endif()
+ 
+--- ceph-17.2.3/src/crypto/qat/CMakeLists.txt.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crypto/qat/CMakeLists.txt	2022-08-28 14:39:51.893274653 +0200
+@@ -12,8 +12,8 @@ add_library(ceph_crypto_qat SHARED ${qat
+ add_dependencies(crypto_plugins ceph_crypto_qat)
+ 
+ target_link_libraries(ceph_crypto_qat PRIVATE
+-                      QatDrv::qat_s
+-                      QatDrv::usdm_drv_s)
++                      QatDrv::qat
++                      QatDrv::usdm)
+ 
+ add_dependencies(crypto_plugins ceph_crypto_qat)
+ set_target_properties(ceph_crypto_qat PROPERTIES VERSION 1.0.0 SOVERSION 1)
+--- ceph-17.2.3/cmake/modules/FindQatDrv.cmake.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/cmake/modules/FindQatDrv.cmake	2022-08-28 17:59:19.158087689 +0200
+@@ -39,23 +39,15 @@ function(get_qatdrv_version versionfile)
+ endfunction()
+ 
+ find_path(QATDRV_INCLUDE_DIR
+-  name quickassist/include/cpa.h
+-  HINTS $ENV{ICP_ROOT} /opt/APP/driver/QAT
+-  NO_DEFAULT_PATH)
++  name qat/cpa.h
++  HINTS $ENV{ICP_ROOT}
++  )
+ if(QATDRV_INCLUDE_DIR)
+-  get_qatdrv_version(${QATDRV_INCLUDE_DIR}/versionfile)
+-  set(QatDrv_INCLUDE_DIRS
+-      ${QATDRV_INCLUDE_DIR}/quickassist/include
+-      ${QATDRV_INCLUDE_DIR}/quickassist/include/dc
+-      ${QATDRV_INCLUDE_DIR}/quickassist/lookaside/access_layer/include
+-      ${QATDRV_INCLUDE_DIR}/quickassist/include/lac
+-      ${QATDRV_INCLUDE_DIR}/quickassist/utilities/libusdm_drv
+-      ${QATDRV_INCLUDE_DIR}/quickassist/utilities/libusdm_drv/include)
++  set(QatDrv_INCLUDE_DIRS ${QATDRV_INCLUDE_DIR})
+ endif()
+ foreach(component ${QatDrv_FIND_COMPONENTS})
+   find_library(QatDrv_${component}_LIBRARIES
+-               NAMES ${component}
+-               HINTS ${QATDRV_INCLUDE_DIR}/build/)
++               NAMES ${component})
+   mark_as_advanced(QatDrv_INCLUDE_DIRS
+                    QatDrv_${component}_LIBRARIES)
+   list(APPEND QatDrv_LIBRARIES "${QatDrv_${component}_LIBRARIES}")  
+@@ -71,7 +63,7 @@ find_package_handle_standard_args(QatDrv
+ 
+ foreach(component ${QatDrv_FIND_COMPONENTS})
+   if(NOT TARGET QatDrv::${component})
+-    add_library(QatDrv::${component} STATIC IMPORTED GLOBAL)
++    add_library(QatDrv::${component} SHARED IMPORTED GLOBAL)
+     set_target_properties(QatDrv::${component} PROPERTIES
+                           INTERFACE_INCLUDE_DIRECTORIES "${QatDrv_INCLUDE_DIRS}"
+                           IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+--- ceph-17.2.3/src/compressor/CMakeLists.txt.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/compressor/CMakeLists.txt	2022-08-28 18:59:38.018324891 +0200
+@@ -7,8 +7,8 @@ endif()
+ add_library(compressor_objs OBJECT ${compressor_srcs})
+ if(HAVE_QATZIP AND HAVE_QATDRV)
+   target_link_libraries(compressor_objs PRIVATE
+-                        QatDrv::qat_s
+-                        QatDrv::usdm_drv_s
++                        QatDrv::qat
++                        QatDrv::usdm
+                         qatzip::qatzip
+                        )
+ endif()
+--- ceph-17.2.3/src/crypto/qat/qcccrypto.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crypto/qat/qcccrypto.h	2022-08-28 20:18:02.916194325 +0200
+@@ -8,13 +8,15 @@
+ #include <pthread.h>
+ #include <queue>
+ extern "C" {
+-#include "cpa.h"
+-#include "lac/cpa_cy_sym.h"
+-#include "lac/cpa_cy_im.h"
+-#include "qae_mem.h"
+-#include "icp_sal_user.h"
+-#include "icp_sal_poll.h"
+-#include "qae_mem_utils.h"
++#include "qat/cpa.h"
++#include "qat/cpa_cy_sym.h"
++#include "qat/cpa_cy_im.h"
++#include "qat/qae_mem.h"
++#include "qat/icp_sal_user.h"
++#include "qat/icp_sal_poll.h"
++
++CpaStatus qaeMemInit(void);
++void qaeMemDestroy(void);
+ }
+ 
+ class QccCrypto {

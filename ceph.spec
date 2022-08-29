@@ -1,7 +1,5 @@
 # TODO:
-# - libzbd bluestore backend? (WITH_ZBD=ON, BR: libzbd-devel)
-# - bluefs? (WITH_BLUEFS=ON)
-# - QATZIP? (WITH_QATZIP=ON, BR: qatzip-devel)
+# - QATZIP? (WITH_QATZIP=ON, BR: QATzip-devel)
 # - brotli? (WITH_BROTLI=ON, uses internal brotli as downloaded subproject)
 # - seastar (WITH_SEASTAR=ON, BR: c-ares-devel >= 1.13.0)
 # - proper init scripts if non-systemd boot is to be supported
@@ -15,6 +13,7 @@
 # Conditional build:
 %bcond_without	java		# Java binding
 %bcond_with	angular		# Angular-based mgr/dashboard frontend (built using npm, too outdated currently)
+%bcond_without	bluefs		# BlueFS library
 %bcond_with	dpdk		# DPDK messaging
 # 15.2.x/16.2.x build fails with:
 # src/rgw/rgw_fcgi_process.cc:92:53: error: 'class rgw::sal::RGWRadosStore' has no member named 'get_new_req_id'
@@ -22,9 +21,13 @@
 %bcond_with	fio		# FIO engines support (16.x: downloads fio as internal subproject)
 %bcond_with	kerberos	# GSSAPI/KRB5 support
 %bcond_without	pmem		# PMDK (persistent memory) support
+%bcond_without	qat		# QAT driver
+%bcond_without	qatzip		# QATZIP
 %bcond_without	rdma		# RDMA transport support
+%bcond_without	seastar		# seastar components (64-bit pointers required)
 %bcond_with	spdk		# Ceph SPDK support (DPDK based)
 %bcond_without	system_rocksdb	# system RocksDB storage support
+%bcond_without	zbd		# ZBD bluestore backend
 # 15.2.x/16.2.x: "fallthrough" define from OpenZFS's spl breaks "[[fallthrough]]" in src/include/blobhash.h
 %bcond_with	zfs		# ZFS support [not ready for zfs 0.8.x]
 %bcond_without	lttng		# LTTng tracing
@@ -37,6 +40,9 @@
 %endif
 %ifnarch %{x8664} aarch64
 %undefine	with_pmem
+%endif
+%ifnarch %{x8664} aarch64 mips64 ppc64 sparc64 s390x
+%undefine	with_seastar
 %endif
 #
 Summary:	User space components of the Ceph file system
@@ -55,19 +61,24 @@ Patch1:		%{name}-fio.patch
 Patch2:		%{name}-cmake-static.patch
 Patch3:		%{name}-arrow-pld.patch
 Patch4:		no-virtualenvs.patch
+Patch5:		%{name}-libdir.patch
 Patch6:		types.patch
 Patch7:		use-provided-cpu-flag-values.patch
 Patch8:		ix86-no-asm.patch
 Patch9:		long-int-time_t.patch
+Patch10:	%{name}-qat.patch
 Patch11:	%{name}-liburing.patch
 URL:		https://ceph.io/
+%{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
 BuildRequires:	boost-devel >= 1.72
 BuildRequires:	boost-python3-devel >= 1.72
+%{?with_seastar:BuildRequires:	c-ares-devel >= 1.13.0}
 BuildRequires:	cmake >= 3.22.2
+%{?with_seastar:BuildRequires:	cryptopp-devel >= 5.6.5}
 BuildRequires:	cryptsetup-devel >= 2.0.5
 BuildRequires:	curl-devel
-%if %{with dpdk} || %{with spdk}
+%if %{with dpdk} || %{with seastar} || %{with spdk}
 BuildRequires:	dpdk-devel
 %endif
 BuildRequires:	doxygen
@@ -75,9 +86,11 @@ BuildRequires:	expat-devel >= 1.95
 %{?with_fcgi:BuildRequires:	fcgi-devel}
 %{?with_fio:BuildRequires:	fio-devel >= 3.15}
 BuildRequires:	gdbm-devel
+%{?with_seastar:BuildRequires:	gnutls-devel >= 3.3.26}
 BuildRequires:	gperf
 %{?with_tcmalloc:BuildRequires:	gperftools-devel >= 2.6.2}
 %{?with_kerberos:BuildRequires:	heimdal-devel}
+%{?with_seastar:BuildRequires:	hwloc-devel >= 1.11.2}
 %if %{with java}
 BuildRequires:	jdk
 BuildRequires:	jre-X11
@@ -97,19 +110,22 @@ BuildRequires:	libltdl-devel
 BuildRequires:	libnl-devel >= 3.2
 BuildRequires:	librdkafka-devel >= 0.9.2
 %{?with_rdma:BuildRequires:	librdmacm-devel}
+%{?with_seastar:BuildRequires:	libsctp-devel}
 BuildRequires:	libstdc++-devel >= 6:7
 %{?with_tcmalloc:BuildRequires:	libtcmalloc-devel >= 2.6.2}
 BuildRequires:	libtool >= 2:1.5
 BuildRequires:	liburing-devel
 BuildRequires:	libuuid-devel
 BuildRequires:	libxml2-devel >= 2.0
+%{?with_zbd:BuildRequires:	libzbd-devel}
 %{?with_lttng:BuildRequires:	lttng-ust-devel}
 BuildRequires:	lua-devel >= 5.3
-BuildRequires:	lz4-devel >= 1:1.7
+BuildRequires:	lz4-devel >= 1:1.7.3
 BuildRequires:	ncurses-devel
 %{?with_angular:BuildRequires:	npm}
 BuildRequires:	nspr-devel >= 4
 BuildRequires:	nss-devel >= 3
+%{?with_seastar:BuildRequires:	numactl-devel}
 BuildRequires:	oath-toolkit-devel
 BuildRequires:	openldap-devel
 BuildRequires:	openssl-devel >= 1.1
@@ -122,8 +138,10 @@ BuildRequires:	python3-PyYAML
 BuildRequires:	python3-devel >= 1:3.2
 %{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
 BuildRequires:	rabbitmq-c-devel
+%{?with_seastar:BuildRequires:	ragel >= 6.10}
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.14}
 BuildRequires:	rpmbuild(macros) >= 1.671
+%{?with_qat:BuildRequires:	qatlib-devel}
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
 BuildRequires:	sphinx-pdg >= 4.4.0
@@ -133,6 +151,7 @@ BuildRequires:	thrift-devel
 BuildRequires:	udev-devel
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
 BuildRequires:	xfsprogs-devel
+%{?with_seastar:BuildRequires:	yaml-cpp-devel >= 0.5.1}
 %ifarch %{x8664}
 BuildRequires:	yasm
 %endif
@@ -142,7 +161,7 @@ BuildRequires:	zstd-devel >= 1.4.4
 Requires(post,preun):	/sbin/chkconfig
 Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
-Requires:	lz4 >= 1:1.7
+Requires:	lz4 >= 1:1.7.3
 Requires:	python3-%{name} = %{version}-%{release}
 %{?with_system_rocksdb:Requires:	rocksdb >= 5.14}
 Requires:	systemd-units >= 38
@@ -306,12 +325,14 @@ uruchamiania demonów.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
 %ifarch %{ix86}
 %patch9 -p1
 %endif
+%patch10 -p1
 %patch11 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
@@ -354,6 +375,7 @@ cd build
 	-DPYTHON=%{__python3} \
 	-DSPHINX_BUILD=/usr/bin/sphinx-build \
 	%{!?with_babeltrace:-DWITH_BABELTRACE=OFF} \
+	%{?with_bluefs:-DWITH_BLUEFS=ON} \
 %if %{with pmem}
 	-DWITH_BLUESTORE_PMEM=ON \
 	-DWITH_SYSTEM_PMDK:BOOL=ON \
@@ -370,6 +392,9 @@ cd build
 	%{?with_fcgi:-DWITH_RADOSGW_FCGI_FRONTEND=ON} \
 	%{!?with_rdma:-DWITH_RDMA=OFF} \
 	-DWITH_REENTRANT_STRSIGNAL=ON \
+	%{?with_qat:-DWITH_QAT=ON} \
+	%{?with_qatzip:-DWITH_QATZIP=ON} \
+	%{?with_seastar:-DWITH_SEASTAR=ON} \
 	%{?with_spdk:-DWITH_SPDK=ON} \
 	-DWITH_SYSTEM_BOOST=ON \
 	-DWITH_SYSTEM_LIBURING=ON \
@@ -378,6 +403,7 @@ cd build
 	-DWITH_SYSTEM_ZSTD=ON \
 	-DWITH_SYSTEMD=ON \
 	%{!?with_tests:-DWITH_TESTS=OFF} \
+	%{?with_zbd:-DWITH_ZBD=ON} \
 	%{?with_zfs:-DWITH_ZFS=ON}
 
 # some object files have missing dependencies on these, pregenerate to avoid global -j1
@@ -651,6 +677,9 @@ fi
 
 %files libs
 %defattr(644,root,root,755)
+%if %{with bluefs}
+%attr(755,root,root) %{_libdir}/libbluefs.so
+%endif
 %attr(755,root,root) %{_libdir}/libcephfs.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libcephfs.so.2
 %attr(755,root,root) %{_libdir}/libos_tp.so.*.*.*

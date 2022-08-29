@@ -1,0 +1,11 @@
+--- ceph-17.2.3/src/os/CMakeLists.txt.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/os/CMakeLists.txt	2022-08-28 13:58:09.699009978 +0200
+@@ -76,7 +76,7 @@ if(WITH_BLUEFS)
+   target_include_directories(bluefs SYSTEM PUBLIC
+     $<TARGET_PROPERTY:RocksDB::RocksDB,INTERFACE_INCLUDE_DIRECTORIES>)
+   target_link_libraries(bluefs global)
+-  install(TARGETS bluefs DESTINATION lib)
++  install(TARGETS bluefs DESTINATION lib${LIB_SUFFIX})
+ endif(WITH_BLUEFS)
+ 
+ if(WITH_FUSE)

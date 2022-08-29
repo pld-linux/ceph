@@ -98,3 +98,43 @@
  
  out:
    return rc;
+--- ceph-17.2.3/src/seastar/src/core/file.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/file.cc	2022-08-28 09:19:17.258501014 +0200
+@@ -313,7 +313,7 @@ posix_file_impl::close() noexcept {
+ 
+ future<uint64_t>
+ blockdev_file_impl::size(void) noexcept {
+-    return engine()._thread_pool->submit<syscall_result_extra<size_t>>([this] {
++    return engine()._thread_pool->submit<syscall_result_extra<uint64_t>>([this] {
+         uint64_t size;
+         int ret = ::ioctl(_fd, BLKGETSIZE64, &size);
+         return wrap_syscall(ret, size);
+@@ -908,7 +908,7 @@ append_challenged_posix_file_impl::trunc
+ 
+ future<uint64_t>
+ append_challenged_posix_file_impl::size() noexcept {
+-    return make_ready_future<size_t>(_logical_size);
++    return make_ready_future<uint64_t>(_logical_size);
+ }
+ 
+ future<>
+@@ -996,7 +996,7 @@ make_file_impl(int fd, file_open_options
+                 engine().fstatfs(fd).then([fd, st_dev] (struct statfs sfs) {
+                     internal::fs_info fsi;
+                     fsi.block_size = sfs.f_bsize;
+-                    switch (sfs.f_type) {
++                    switch (static_cast<unsigned>(sfs.f_type)) {
+                     case 0x58465342: /* XFS */
+                         dioattr da;
+                         if (::ioctl(fd, XFS_IOC_DIOINFO, &da) == 0) {
+--- ceph-17.2.3/src/seastar/src/core/fstream.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/fstream.cc	2022-08-28 09:22:32.072057177 +0200
+@@ -419,7 +419,7 @@ private:
+         if ((buf.size() & (_file.disk_write_dma_alignment() - 1)) != 0) {
+             // If buf size isn't aligned, copy its content into a new aligned buf.
+             // This should only happen when the user calls output_stream::flush().
+-            auto tmp = allocate_buffer(align_up(buf.size(), _file.disk_write_dma_alignment()));
++            auto tmp = allocate_buffer(align_up<uint64_t>(buf.size(), _file.disk_write_dma_alignment()));
+             ::memcpy(tmp.get_write(), buf.get(), buf.size());
+             ::memset(tmp.get_write() + buf.size(), 0, tmp.size() - buf.size());
+             buf = std::move(tmp);
