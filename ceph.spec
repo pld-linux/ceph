@@ -24,7 +24,7 @@
 %bcond_without	qat		# QAT driver
 %bcond_without	qatzip		# QATZIP
 %bcond_without	rdma		# RDMA transport support
-%bcond_without	seastar		# seastar components (64-bit pointers required)
+%bcond_with	seastar		# seastar components (64-bit pointers required)
 %bcond_with	spdk		# Ceph SPDK support (DPDK based)
 %bcond_without	system_rocksdb	# system RocksDB storage support
 %bcond_without	zbd		# ZBD bluestore backend
