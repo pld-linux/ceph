@@ -68,6 +68,8 @@ Patch8:		ix86-no-asm.patch
 Patch9:		long-int-time_t.patch
 Patch10:	%{name}-qat.patch
 Patch11:	%{name}-liburing.patch
+Patch12:	%{name}-glibc.patch
+Patch13:	%{name}-libfmt.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -78,7 +80,8 @@ BuildRequires:	cmake >= 3.22.2
 %{?with_seastar:BuildRequires:	cryptopp-devel >= 5.6.5}
 BuildRequires:	cryptsetup-devel >= 2.0.5
 BuildRequires:	curl-devel
-%if %{with dpdk} || %{with seastar} || %{with spdk}
+%if %{with dpdk} || %{with spdk}
+# also seastar with dpdk support
 BuildRequires:	dpdk-devel
 %endif
 BuildRequires:	doxygen
@@ -170,7 +173,7 @@ Obsoletes:	gcephtool < 0.51
 Obsoletes:	hadoop-cephfs < 0.71
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
-%define		skip_post_check_so	libceph_crypto_isal.so.* libceph_lz4.so.* libceph_snappy.so.* libceph_zlib.so.* libceph_zstd.so.* libcls_.*.so.* libec_.*.so.*
+%define		skip_post_check_so	libceph_crypto_isal.so.* libceph_crypto_qat.so.* libceph_lz4.so.* libceph_snappy.so.* libceph_zlib.so.* libceph_zstd.so.* libcls_.*.so.* libec_.*.so.*
 
 %description
 Ceph is a distributed network file system designed to provide
@@ -334,6 +337,8 @@ uruchamiania demonów.
 %endif
 %patch10 -p1
 %patch11 -p1
+%patch12 -p1
+%patch13 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
@@ -566,6 +571,9 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_isal.so*
 %endif
 %attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_openssl.so*
+%if %{with qat}
+%attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_qat.so*
+%endif
 %dir %{_libdir}/ceph/denc
 %attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-cephfs.so
 %attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-common.so
