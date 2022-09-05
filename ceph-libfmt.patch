@@ -1,0 +1,690 @@
+--- ceph-17.2.3/src/seastar/src/core/exception_hacks.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/exception_hacks.cc	2022-09-04 18:05:18.578088101 +0200
+@@ -98,7 +98,7 @@ void log_exception_trace() noexcept {
+     static thread_local bool nested = false;
+     if (!nested && exception_logger.is_enabled(log_level::trace)) {
+         nested = true;
+-        exception_logger.trace("Throw exception at:\n{}", current_backtrace());
++        exception_logger.trace("Throw exception at:\n{}", fmt::streamed(current_backtrace()));
+         nested = false;
+     }
+ }
+--- ceph-17.2.3/src/seastar/src/core/reactor_backend.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/reactor_backend.cc	2022-09-04 18:04:16.884860615 +0200
+@@ -235,7 +235,7 @@ void aio_storage_context::schedule_retry
+             // The next call to submit_work will call schedule_retry again.
+             if (f.failed()) {
+                 auto ex = f.get_exception();
+-                seastar_logger.warn("aio_storage_context::schedule_retry failed: {}", std::move(ex));
++                seastar_logger.warn("aio_storage_context::schedule_retry failed: {}", fmt::streamed(std::move(ex)));
+                 return;
+             }
+             auto result = f.get0();
+@@ -245,7 +245,7 @@ void aio_storage_context::schedule_retry
+                 try {
+                     nr_consumed = handle_aio_error(iocbs[0], result.error);
+                 } catch (...) {
+-                    seastar_logger.error("aio retry failed: {}. Aborting.", std::current_exception());
++                    seastar_logger.error("aio retry failed: {}. Aborting.", fmt::streamed(std::current_exception()));
+                     abort();
+                 }
+             } else {
+@@ -780,7 +780,7 @@ reactor_backend_epoll::wait_and_process(
+       try {
+         maybe_switch_steady_clock_timers(timeout, _steady_clock_timer_reactor_thread, _steady_clock_timer_timer_thread);
+       } catch (...) {
+-        seastar_logger.error("Switching steady_clock timers back failed: {}. Aborting...", std::current_exception());
++        seastar_logger.error("Switching steady_clock timers back failed: {}. Aborting...", fmt::streamed(std::current_exception()));
+         abort();
+       }
+     });
+--- ceph-17.2.3/src/common/Journald.cc.orig	2022-09-04 18:08:09.890385180 +0200
++++ ceph-17.2.3/src/common/Journald.cc	2022-09-04 18:09:12.196980758 +0200
+@@ -151,7 +151,7 @@ MESSAGE
+       clog_type_to_syslog_level(le.prio),
+       le.stamp.to_nsec(),
+       le.name.to_str(),
+-      le.rank,
++      fmt::streamed(le.rank),
+       le.seq,
+       le.channel);
+ 
+--- ceph-17.2.3/src/seastar/src/core/future.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/future.cc	2022-09-04 18:12:07.369486036 +0200
+@@ -207,7 +207,7 @@ void future_state_base::rethrow_exceptio
+ 
+ void report_failed_future(const std::exception_ptr& eptr) noexcept {
+     ++engine()._abandoned_failed_futures;
+-    seastar_logger.warn("Exceptional future ignored: {}, backtrace: {}", eptr, current_backtrace());
++    seastar_logger.warn("Exceptional future ignored: {}, backtrace: {}", fmt::streamed(eptr), fmt::streamed(current_backtrace()));
+ }
+ 
+ void report_failed_future(const future_state_base& state) noexcept {
+--- ceph-17.2.3/src/seastar/src/core/fstream.cc.orig	2022-08-30 09:00:26.425084492 +0200
++++ ceph-17.2.3/src/seastar/src/core/fstream.cc	2022-09-04 18:10:48.772037230 +0200
+@@ -511,7 +511,7 @@ future<data_sink> make_file_data_sink(fi
+                     std::rethrow_exception(std::move(ex));
+                 } catch (...) {
+                     std::throw_with_nested(std::runtime_error(fmt::format("While handling failed construction of data_sink, caught exception: {}",
+-                                fut.get_exception())));
++                                fmt::streamed(fut.get_exception()))));
+                 }
+             }
+             return make_exception_future<data_sink>(std::move(ex));
+--- ceph-17.2.3/src/mon/LogMonitor.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/mon/LogMonitor.cc	2022-09-04 17:59:19.765987645 +0200
+@@ -415,7 +415,7 @@ void LogMonitor::log_external(const LogE
+     }
+ 
+     if (fd >= 0) {
+-      fmt::format_to(file_log_buffer, "{}\n", le);
++      fmt::format_to(std::back_inserter(file_log_buffer), "{}\n", fmt::streamed(le));
+       int err = safe_write(fd, file_log_buffer.data(), file_log_buffer.size());
+       file_log_buffer.clear();
+       if (err < 0) {
+--- ceph-17.2.3/src/seastar/src/core/on_internal_error.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/on_internal_error.cc	2022-09-04 19:01:07.218073017 +0200
+@@ -35,7 +35,7 @@ bool seastar::set_abort_on_internal_erro
+ 
+ void seastar::on_internal_error(logger& logger, std::string_view msg) {
+     if (abort_on_internal_error.load()) {
+-        logger.error("{}, at: {}", msg, current_backtrace());
++        logger.error("{}, at: {}", msg, fmt::streamed(current_backtrace()));
+         abort();
+     } else {
+         throw_with_backtrace<std::runtime_error>(std::string(msg));
+@@ -44,7 +44,7 @@ void seastar::on_internal_error(logger&
+ 
+ void seastar::on_internal_error(logger& logger, std::exception_ptr ex) {
+     if (abort_on_internal_error.load()) {
+-        logger.error("{}", ex);
++        logger.error("{}", fmt::streamed(ex));
+         abort();
+     } else {
+         std::rethrow_exception(std::move(ex));
+@@ -52,7 +52,7 @@ void seastar::on_internal_error(logger&
+ }
+ 
+ void seastar::on_internal_error_noexcept(logger& logger, std::string_view msg) noexcept {
+-    logger.error("{}, at: {}", msg, current_backtrace());
++    logger.error("{}, at: {}", msg, fmt::streamed(current_backtrace()));
+     if (abort_on_internal_error.load()) {
+         abort();
+     }
+--- ceph-17.2.3/src/seastar/include/seastar/util/backtrace.hh.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/include/seastar/util/backtrace.hh	2022-09-04 19:27:16.336970410 +0200
+@@ -184,7 +184,7 @@ public:
+     template<typename... Args>
+     backtraced(Args&&... args)
+             : Exc(std::forward<Args>(args)...)
+-            , _backtrace(std::make_shared<sstring>(format("{} Backtrace: {}", Exc::what(), current_backtrace()))) {}
++            , _backtrace(std::make_shared<sstring>(format("{} Backtrace: {}", Exc::what(), fmt::streamed(current_backtrace())))) {}
+ 
+     /**
+      * Returns the original exception message with a backtrace appended to it
+--- ceph-17.2.3/src/seastar/src/core/prometheus.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/prometheus.cc	2022-09-04 19:32:16.272626166 +0200
+@@ -532,7 +532,7 @@ future<> write_text_representation(outpu
+                     } catch (...) {
+                         auto ex = std::current_exception();
+                         // print this error as it's ignored later on by `connection::start_response`
+-                        seastar_logger.error("prometheus: write_text_representation: {}: {}", s.str(), ex);
++                        seastar_logger.error("prometheus: write_text_representation: {}: {}", s.str(), fmt::streamed(ex));
+                         std::rethrow_exception(std::move(ex));
+                     }
+                     s << value_str;
+--- ceph-17.2.3/src/seastar/src/core/memory.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/memory.cc	2022-09-04 19:34:50.387337178 +0200
+@@ -754,7 +754,7 @@ cpu_pages::allocate_large_and_trim(unsig
+ void
+ cpu_pages::warn_large_allocation(size_t size) {
+     alloc_stats::increment_local(alloc_stats::types::large_allocs);
+-    seastar_memory_logger.warn("oversized allocation: {} bytes. This is non-fatal, but could lead to latency and/or fragmentation issues. Please report: at {}", size, current_backtrace());
++    seastar_memory_logger.warn("oversized allocation: {} bytes. This is non-fatal, but could lead to latency and/or fragmentation issues. Please report: at {}", size, fmt::streamed(current_backtrace()));
+     large_allocation_warning_threshold *= 1.618; // prevent spam
+ }
+ 
+@@ -1616,6 +1616,15 @@ std::ostream& operator<<(std::ostream& o
+     return os;
+ }
+ 
++}
++}
++
++template <>
++struct fmt::formatter<seastar::memory::human_readable_value> : ostream_formatter {};
++
++namespace seastar {
++namespace memory {
++
+ static human_readable_value to_human_readable_value(uint64_t value, uint64_t step, uint64_t precision, const std::array<char, 5>& suffixes) {
+     if (!value) {
+         return {0, suffixes[0]};
+@@ -1748,7 +1757,7 @@ void maybe_dump_memory_diagnostics(size_
+     }
+ 
+     disable_report_on_alloc_failure_temporarily guard;
+-    seastar_memory_logger.debug("Failed to allocate {} bytes at {}", size, current_backtrace());
++    seastar_memory_logger.debug("Failed to allocate {} bytes at {}", size, fmt::streamed(current_backtrace()));
+ 
+     static thread_local logger::rate_limit rate_limit(std::chrono::seconds(10));
+ 
+--- ceph-17.2.3/src/seastar/src/core/io_queue.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/io_queue.cc	2022-09-04 19:41:17.627629354 +0200
+@@ -207,7 +207,7 @@ public:
+         , _fq_entry(_ioq.request_fq_ticket(dnl))
+         , _desc(std::make_unique<io_desc_read_write>(_ioq, pc, _stream, _fq_entry.ticket()))
+     {
+-        io_log.trace("dev {} : req {} queue  len {} ticket {}", _ioq.dev_id(), fmt::ptr(&*_desc), _dnl.length(), _fq_entry.ticket());
++        io_log.trace("dev {} : req {} queue  len {} ticket {}", _ioq.dev_id(), fmt::ptr(&*_desc), _dnl.length(), fmt::streamed(_fq_entry.ticket()));
+     }
+ 
+     queued_io_request(queued_io_request&&) = delete;
+--- ceph-17.2.3/src/seastar/src/core/reactor.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/reactor.cc	2022-09-04 19:39:35.978957648 +0200
+@@ -821,7 +821,7 @@ static decltype(auto) install_signal_han
+             throw_system_error_on(r == -1);
+         } catch (...) {
+             mem.release(); // We failed to restore previous stack, must leak it.
+-            seastar_logger.error("Failed to restore signal stack: {}", std::current_exception());
++            seastar_logger.error("Failed to restore signal stack: {}", fmt::streamed(std::current_exception()));
+         }
+     });
+ }
+@@ -1313,7 +1313,7 @@ internal::make_cpu_stall_detector(cpu_st
+     try {
+         return cpu_stall_detector_linux_perf_event::try_make(cfg);
+     } catch (...) {
+-        seastar_logger.warn("Creation of perf_event based stall detector failed, falling back to posix timer: {}", std::current_exception());
++        seastar_logger.warn("Creation of perf_event based stall detector failed, falling back to posix timer: {}", fmt::streamed(std::current_exception()));
+         return std::make_unique<cpu_stall_detector_posix_timer>(cfg);
+     }
+ }
+@@ -1389,7 +1389,7 @@ void reactor::complete_timers(T& timers,
+                 *internal::current_scheduling_group_ptr() = t->_sg;
+                 t->_callback();
+             } catch (...) {
+-                seastar_logger.error("Timer callback failed: {}", std::current_exception());
++                seastar_logger.error("Timer callback failed: {}", fmt::streamed(std::current_exception()));
+             }
+         }
+     }
+@@ -1511,7 +1511,7 @@ reactor::posix_listen(socket_address sa,
+         fd.bind(sa.u.sa, sa.length());
+         fd.listen(opts.listen_backlog);
+     } catch (const std::system_error& s) {
+-        throw std::system_error(s.code(), fmt::format("posix_listen failed for address {}", sa));
++        throw std::system_error(s.code(), fmt::format("posix_listen failed for address {}", fmt::streamed(sa)));
+     }
+ 
+     return pollable_fd(std::move(fd));
+@@ -3487,7 +3487,7 @@ reactor_options::reactor_options(program
+                  " The diagnostics will be written to the seastar_memory logger, with error level."
+                  " Note that if the seastar_memory logger is set to debug or trace level, the diagnostics will be logged irrespective of this setting.")
+     , reactor_backend(*this, "reactor-backend", backend_selector_candidates(), reactor_backend_selector::default_backend().name(),
+-                format("Internal reactor implementation ({})", reactor_backend_selector::available()))
++                format("Internal reactor implementation ({})", fmt::streamed(reactor_backend_selector::available())))
+     , aio_fsync(*this, "aio-fsync", kernel_supports_aio_fsync(),
+                 "Use Linux aio for fsync() calls. This reduces latency; requires Linux 4.18 or later.")
+     , max_networking_io_control_blocks(*this, "max-networking-io-control-blocks", 10000,
+@@ -4207,7 +4207,7 @@ bool smp::pure_poll_queues() {
+ __thread reactor* local_engine;
+ 
+ void report_exception(std::string_view message, std::exception_ptr eptr) noexcept {
+-    seastar_logger.error("{}: {}", message, eptr);
++    seastar_logger.error("{}: {}", message, fmt::streamed(eptr));
+ }
+ 
+ future<> check_direct_io_support(std::string_view path) noexcept {
+--- ceph-17.2.3/src/seastar/src/http/httpd.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/http/httpd.cc	2022-09-04 20:20:30.365222925 +0200
+@@ -310,12 +310,12 @@ future<> connection::process() {
+         try {
+             std::get<0>(joined).get();
+         } catch (...) {
+-            hlogger.debug("Read exception encountered: {}", std::current_exception());
++            hlogger.debug("Read exception encountered: {}", fmt::streamed(std::current_exception()));
+         }
+         try {
+             std::get<1>(joined).get();
+         } catch (...) {
+-            hlogger.debug("Response exception encountered: {}", std::current_exception());
++            hlogger.debug("Response exception encountered: {}", fmt::streamed(std::current_exception()));
+         }
+         return make_ready_future<>();
+     });
+@@ -519,17 +519,17 @@ future<> http_server::do_accept_one(int
+         auto conn = std::make_unique<connection>(*this, std::move(ar.connection), std::move(ar.remote_address));
+         (void)try_with_gate(_task_gate, [conn = std::move(conn)]() mutable {
+             return conn->process().handle_exception([conn = std::move(conn)] (std::exception_ptr ex) {
+-                hlogger.error("request error: {}", ex);
++                hlogger.error("request error: {}", fmt::streamed(ex));
+             });
+         }).handle_exception_type([] (const gate_closed_exception& e) {});
+     }).handle_exception_type([] (const std::system_error &e) {
+         // We expect a ECONNABORTED when http_server::stop is called,
+         // no point in warning about that.
+         if (e.code().value() != ECONNABORTED) {
+-            hlogger.error("accept failed: {}", e);
++            hlogger.error("accept failed: {}", fmt::streamed(e));
+         }
+     }).handle_exception([] (std::exception_ptr ex) {
+-        hlogger.error("accept failed: {}", ex);
++        hlogger.error("accept failed: {}", fmt::streamed(ex));
+     });
+ }
+ 
+--- ceph-17.2.3/src/tools/neorados.cc.orig	2022-08-30 09:00:26.418417475 +0200
++++ ceph-17.2.3/src/tools/neorados.cc	2022-09-04 20:23:19.850824080 +0200
+@@ -55,7 +55,7 @@ void printseq(const V& v, std::ostream&
+ {
+   std::for_each(v.cbegin(), v.cend(),
+ 		[&m](const auto& e) {
+-		  fmt::print(m, "{}\n", e);
++		  fmt::print(m, "{}\n", fmt::streamed(e));
+ 		});
+ }
+ 
+@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
+     po::notify(vm);
+ 
+     if (vm.count("help")) {
+-      fmt::print("{}", desc);
++      fmt::print("{}", fmt::streamed(desc));
+       fmt::print("Commands:\n");
+       for (const auto& cmd : commands) {
+ 	fmt::print("    {} {}{}{}\n",
+--- ceph-17.2.3/src/seastar/src/net/dns.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/net/dns.cc	2022-09-04 20:36:25.288504129 +0200
+@@ -238,7 +238,7 @@ public:
+             sstring name;
+         };
+ 
+-        dns_log.debug("Query name {} ({})", name, family);
++        dns_log.debug("Query name {} ({})", name, fmt::streamed(family));
+ 
+         if (!family) {
+             auto res = inet_address::parse_numerical(name);
+@@ -291,7 +291,7 @@ public:
+             inet_address addr;
+         };
+ 
+-        dns_log.debug("Query addr {}", addr);
++        dns_log.debug("Query addr {}", fmt::streamed(addr));
+ 
+         auto p = new promise_wrap(std::move(addr));
+         auto f = p->get_future();
+@@ -501,7 +501,7 @@ private:
+             ++p;
+         }
+ 
+-        dns_log.debug("Query success: {}/{}", e.names.front(), e.addr_list.front());
++        dns_log.debug("Query success: {}/{}", e.names.front(), fmt::streamed(e.addr_list.front()));
+ 
+         return e;
+     }
+@@ -599,7 +599,7 @@ private:
+             auto& e = get_socket_entry(fd);
+             auto sa = sock_addr(addr, len);
+ 
+-            dns_log.trace("Connect {}({})->{}", fd, int(e.typ), sa);
++            dns_log.trace("Connect {}({})->{}", fd, int(e.typ), fmt::streamed(sa));
+ 
+             assert(e.avail == 0);
+ 
+@@ -618,7 +618,7 @@ private:
+                             e.tcp.socket = f.get0();
+                             dns_log.trace("Connection complete: {}", fd);
+                         } catch (...) {
+-                            dns_log.debug("Connect {} failed: {}", fd, std::current_exception());
++                            dns_log.debug("Connect {} failed: {}", fd, fmt::streamed(std::current_exception()));
+                         }
+                         e.avail = POLLOUT|POLLIN;
+                         me->poll_sockets();
+@@ -682,7 +682,7 @@ private:
+                                 dns_log.trace("Read {} -> {} bytes", fd, buf.size());
+                                 e.tcp.indata = std::move(buf);
+                             } catch (...) {
+-                                dns_log.debug("Read {} failed: {}", fd, std::current_exception());
++                                dns_log.debug("Read {} failed: {}", fd, fmt::streamed(std::current_exception()));
+                             }
+                             e.avail |= POLLIN; // always reset state
+                             me->poll_sockets();
+@@ -708,7 +708,7 @@ private:
+                     if (udp.in) {
+                         auto & p = udp.in->get_data();
+ 
+-                        dns_log.trace("Read {}. {} bytes available from {}", fd, p.len(), udp.in->get_src());
++                        dns_log.trace("Read {}. {} bytes available from {}", fd, p.len(), fmt::streamed(udp.in->get_src()));
+ 
+                         if (from != nullptr) {
+                             *from = socket_address(udp.in->get_src()).as_posix_sockaddr();
+@@ -746,7 +746,7 @@ private:
+                                 e.udp.in = std::move(d);
+                                 e.avail |= POLLIN;
+                             } catch (...) {
+-                                dns_log.debug("Read {} failed: {}", fd, std::current_exception());
++                                dns_log.debug("Read {} failed: {}", fd, fmt::streamed(std::current_exception()));
+                             }
+                             me->poll_sockets();
+                             me->release(fd);
+@@ -840,7 +840,7 @@ private:
+                             f.get();
+                             dns_log.trace("Send {}. {} bytes sent.", fd, bytes);
+                         } catch (...) {
+-                            dns_log.debug("Send {} failed: {}", fd, std::current_exception());
++                            dns_log.debug("Send {} failed: {}", fd, fmt::streamed(std::current_exception()));
+                         }
+                         e.avail |= POLLOUT;
+                         me->poll_sockets();
+--- ceph-17.2.3/src/seastar/src/util/alloc_failure_injector.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/util/alloc_failure_injector.cc	2022-09-04 20:37:46.729440078 +0200
+@@ -35,7 +35,7 @@ void alloc_failure_injector::fail() {
+     _failed = true;
+     cancel();
+     if (log.is_enabled(log_level::trace)) {
+-        log.trace("Failing at {}", current_backtrace());
++        log.trace("Failing at {}", fmt::streamed(current_backtrace()));
+     }
+     _on_alloc_failure();
+ }
+--- ceph-17.2.3/src/seastar/src/rpc/rpc.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/rpc/rpc.cc	2022-09-04 20:49:25.379426601 +0200
+@@ -10,11 +10,11 @@ namespace seastar {
+ namespace rpc {
+ 
+     void logger::operator()(const client_info& info, id_type msg_id, const sstring& str) const {
+-        log(format("client {} msg_id {}:  {}", info.addr, msg_id, str));
++        log(format("client {} msg_id {}:  {}", fmt::streamed(info.addr), msg_id, str));
+     }
+ 
+     void logger::operator()(const client_info& info, id_type msg_id, log_level level, std::string_view str) const {
+-        log(level, "client {} msg_id {}:  {}", info.addr, msg_id, str);
++        log(level, "client {} msg_id {}:  {}", fmt::streamed(info.addr), msg_id, str);
+     }
+ 
+     void logger::operator()(const client_info& info, const sstring& str) const {
+@@ -26,11 +26,11 @@ namespace rpc {
+     }
+ 
+     void logger::operator()(const socket_address& addr, const sstring& str) const {
+-        log(format("client {}: {}", addr, str));
++        log(format("client {}: {}", fmt::streamed(addr), str));
+     }
+ 
+     void logger::operator()(const socket_address& addr, log_level level, std::string_view str) const {
+-        log(level, "client {}: {}", addr, str);
++        log(level, "client {}: {}", fmt::streamed(addr), str);
+     }
+ 
+   no_wait_type no_wait;
+@@ -790,7 +790,7 @@ namespace rpc {
+                   f = smp::submit_to(_parent_id.shard(), [this, c = make_foreign(static_pointer_cast<rpc::connection>(shared_from_this()))] () mutable {
+                       auto sit = _servers.find(*_server._options.streaming_domain);
+                       if (sit == _servers.end()) {
+-                          throw std::logic_error(format("Shard {:d} does not have server with streaming domain {:x}", this_shard_id(), *_server._options.streaming_domain).c_str());
++                          throw std::logic_error(format("Shard {:d} does not have server with streaming domain {}", this_shard_id(), fmt::streamed(*_server._options.streaming_domain)).c_str());
+                       }
+                       auto s = sit->second;
+                       auto it = s->_conns.find(_parent_id);
+@@ -1010,7 +1010,7 @@ future<> server::connection::send_unknow
+   {
+       if (_options.streaming_domain) {
+           if (_servers.find(*_options.streaming_domain) != _servers.end()) {
+-              throw std::runtime_error(format("An RPC server with the streaming domain {} is already exist", *_options.streaming_domain));
++              throw std::runtime_error(format("An RPC server with the streaming domain {} is already exist", fmt::streamed(*_options.streaming_domain)));
+           }
+           _servers[*_options.streaming_domain] = this;
+       }
+--- ceph-17.2.3/src/seastar/src/util/log.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/util/log.cc	2022-09-04 20:50:15.945414934 +0200
+@@ -312,7 +312,7 @@ void logger::failed_to_log(std::exceptio
+             if (!fmt.format.empty()) {
+                 it = fmt::format_to(it, ": fmt='{}'", fmt.format);
+             }
+-            return fmt::format_to(it, ": {}", ex);
++            return fmt::format_to(it, ": {}", fmt::streamed(ex));
+         });
+         do_log(log_level::error, writer);
+     } catch (...) {
+@@ -577,7 +577,7 @@ std::ostream& operator<<(std::ostream& o
+         try {
+             throw;
+         } catch (const seastar::nested_exception& ne) {
+-            out << fmt::format(": {} (while cleaning up after {})", ne.inner, ne.outer);
++            out << fmt::format(": {} (while cleaning up after {})", fmt::streamed(ne.inner), fmt::streamed(ne.outer));
+         } catch (const std::system_error& e) {
+             out << " (error " << e.code() << ", " << e.what() << ")";
+         } catch (const std::exception& e) {
+--- ceph-17.2.3/src/seastar/src/websocket/server.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/websocket/server.cc	2022-09-04 20:50:55.620831451 +0200
+@@ -69,17 +69,17 @@ future<> server::do_accept_one(int which
+         auto conn = std::make_unique<connection>(*this, std::move(ar.connection));
+         (void)try_with_gate(_task_gate, [conn = std::move(conn)]() mutable {
+             return conn->process().handle_exception([conn = std::move(conn)] (std::exception_ptr ex) {
+-                wlogger.error("request error: {}", ex);
++                wlogger.error("request error: {}", fmt::streamed(ex));
+             });
+         }).handle_exception_type([] (const gate_closed_exception& e) {});
+     }).handle_exception_type([] (const std::system_error &e) {
+         // We expect a ECONNABORTED when server::stop is called,
+         // no point in warning about that.
+         if (e.code().value() != ECONNABORTED) {
+-            wlogger.error("accept failed: {}", e);
++            wlogger.error("accept failed: {}", fmt::streamed(e));
+         }
+     }).handle_exception([] (std::exception_ptr ex) {
+-        wlogger.error("accept failed: {}", ex);
++        wlogger.error("accept failed: {}", fmt::streamed(ex));
+     });
+ }
+ 
+@@ -108,12 +108,12 @@ future<> connection::process() {
+         try {
+             std::get<0>(joined).get();
+         } catch (...) {
+-            wlogger.debug("Read exception encountered: {}", std::current_exception());
++            wlogger.debug("Read exception encountered: {}", fmt::streamed(std::current_exception()));
+         }
+         try {
+             std::get<1>(joined).get();
+         } catch (...) {
+-            wlogger.debug("Response exception encountered: {}", std::current_exception());
++            wlogger.debug("Response exception encountered: {}", fmt::streamed(std::current_exception()));
+         }
+         return make_ready_future<>();
+     });
+@@ -183,7 +183,7 @@ future<> connection::read_loop() {
+         });
+     }).then_wrapped([this] (future<> f) {
+         if (f.failed()) {
+-            wlogger.error("Read failed: {}", f.get_exception());
++            wlogger.error("Read failed: {}", fmt::streamed(f.get_exception()));
+         }
+         return _replies.push_eventually({});
+     }).finally([this] {
+--- ceph-17.2.3/src/mon/MonMap.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/mon/MonMap.cc	2022-09-04 21:16:11.447309592 +0200
+@@ -796,12 +796,12 @@ seastar::future<> MonMap::init_with_dns_
+                             false);
+       }).handle_exception_type([t=record.target](const std::system_error& e) {
+         logger().debug("{}: unable to resolve name for {}: {}",
+-                       "init_with_dns_srv", t, e);
++                       "init_with_dns_srv", t, fmt::streamed(e));
+       });
+     });
+   }).handle_exception_type([name](const std::system_error& e) {
+     logger().debug("{}: unable to get monitor info from DNS SRV with {}: {}",
+-                 "init_with_dns_srv", name, e);
++                 "init_with_dns_srv", name, fmt::streamed(e));
+     // ignore DNS failures
+     return seastar::make_ready_future<>();
+   });
+--- ceph-17.2.3/src/crimson/common/assert.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/common/assert.cc	2022-09-04 21:27:06.935556194 +0200
+@@ -22,7 +22,7 @@ namespace ceph {
+     logger.error("{}:{} : In function '{}', ceph_assert(%s)\n"
+                  "{}",
+                  file, line, func, assertion,
+-                 seastar::current_backtrace());
++                 fmt::streamed(seastar::current_backtrace()));
+     std::cout << std::flush;
+     abort();
+   }
+@@ -42,7 +42,7 @@ namespace ceph {
+                  "{}\n{}\n",
+                  file, line, func, assertion,
+                  buf,
+-                 seastar::current_backtrace());
++                 fmt::streamed(seastar::current_backtrace()));
+     std::cout << std::flush;
+     abort();
+   }
+@@ -54,7 +54,7 @@ namespace ceph {
+     logger.error("{}:{} : In function '{}', abort(%s)\n"
+                  "{}",
+                  file, line, func, msg,
+-                 seastar::current_backtrace());
++                 fmt::streamed(seastar::current_backtrace()));
+     std::cout << std::flush;
+     abort();
+   }
+@@ -74,7 +74,7 @@ namespace ceph {
+                  "{}\n{}\n",
+                  file, line, func,
+                  buf,
+-                 seastar::current_backtrace());
++                 fmt::streamed(seastar::current_backtrace()));
+     std::cout << std::flush;
+     abort();
+   }
+--- ceph-17.2.3/src/crimson/admin/admin_socket.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/admin/admin_socket.cc	2022-09-04 21:25:31.307155684 +0200
+@@ -77,7 +77,7 @@ auto AdminSocket::parse_cmd(const std::v
+       return tell_result_t{-EINVAL, "invalid json", std::move(out)};
+     }
+   } catch (const std::runtime_error& e) {
+-    logger().error("{}: incoming command syntax: {}", __func__, cmd);
++    logger().error("{}: incoming command syntax: {}", __func__, fmt::streamed(cmd));
+     out.append(string{e.what()});
+     return tell_result_t{-EINVAL, "invalid json", std::move(out)};
+   }
+@@ -88,7 +88,7 @@ auto AdminSocket::parse_cmd(const std::v
+     cmd_getval(cmdmap, "format", format);
+     cmd_getval(cmdmap, "prefix", prefix);
+   } catch (const bad_cmd_get& e) {
+-    logger().error("{}: invalid syntax: {}", __func__, cmd);
++    logger().error("{}: invalid syntax: {}", __func__, fmt::streamed(cmd));
+     out.append(string{e.what()});
+     return tell_result_t{-EINVAL, "invalid json", std::move(out)};
+   }
+@@ -155,7 +155,7 @@ auto AdminSocket::execute_command(const
+     string desc{parsed->hook.desc};
+     if (!validate_cmd(nullptr, desc, parsed->params, os)) {
+       logger().error("AdminSocket::execute_command: "
+-                     "failed to validate '{}': {}", cmd, os.str());
++                     "failed to validate '{}': {}", fmt::streamed(cmd), os.str());
+       ceph::bufferlist out;
+       out.append(os);
+       return seastar::make_ready_future<tell_result_t>(
+@@ -208,7 +208,7 @@ seastar::future<> AdminSocket::handle_cl
+   }).then([&in] {
+     return in.close();
+   }).handle_exception([](auto ep) {
+-    logger().debug("exception on {}: {}", __func__, ep);
++    logger().debug("exception on {}: {}", __func__, fmt::streamed(ep));
+   });
+ }
+ 
+@@ -245,7 +245,7 @@ seastar::future<> AdminSocket::start(con
+         });
+       }).handle_exception([this](auto ep) {
+         if (!stop_gate.is_closed()) {
+-          logger().error("AdminSocket: terminated: {}", ep);
++          logger().error("AdminSocket: terminated: {}", fmt::streamed(ep));
+         }
+       });
+     });
+--- ceph-17.2.3/src/crimson/admin/osd_admin.cc.orig	2022-09-04 21:48:44.290691903 +0200
++++ ceph-17.2.3/src/crimson/admin/osd_admin.cc	2022-09-04 21:48:48.797593322 +0200
+@@ -299,7 +299,7 @@ static ghobject_t test_ops_get_object_na
+       // the return type of `fmt::format` is `std::string`
+       using namespace fmt::literals;
+       throw std::invalid_argument{
+-        "Invalid pool '{}'"_format(*pool_arg)
++	fmt::format("Invalid pool '{}'", *pool_arg)
+       };
+     }
+     return pool;
+@@ -367,7 +367,7 @@ public:
+ 	                                               e.what());
+     }
+     return shard_services.get_store().inject_data_error(obj).then([=] {
+-      logger().info("successfully injected data error for obj={}", obj);
++      logger().info("successfully injected data error for obj={}", fmt::streamed(obj));
+       ceph::bufferlist bl;
+       bl.append("ok"sv);
+       return seastar::make_ready_future<tell_result_t>(0,
+@@ -409,7 +409,7 @@ public:
+ 	                                               e.what());
+     }
+     return shard_services.get_store().inject_mdata_error(obj).then([=] {
+-      logger().info("successfully injected metadata error for obj={}", obj);
++      logger().info("successfully injected metadata error for obj={}", fmt::streamed(obj));
+       ceph::bufferlist bl;
+       bl.append("ok"sv);
+       return seastar::make_ready_future<tell_result_t>(0,
+--- ceph-17.2.3/src/crimson/admin/pg_commands.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/admin/pg_commands.cc	2022-09-04 21:34:44.833110723 +0200
+@@ -59,11 +59,11 @@ public:
+     Ref<PG> pg = osd.get_pg(spg_id);
+     if (!pg) {
+       return seastar::make_ready_future<tell_result_t>(tell_result_t{
+-        -ENOENT, fmt::format("i don't have pgid '{}'", spg_id)});
++        -ENOENT, fmt::format("i don't have pgid '{}'", fmt::streamed(spg_id))});
+     }
+     if (!pg->is_primary()) {
+       return seastar::make_ready_future<tell_result_t>(tell_result_t{
+-        -EAGAIN, fmt::format("not primary for pgid '{}'", spg_id)});
++        -EAGAIN, fmt::format("not primary for pgid '{}'", fmt::streamed(spg_id))});
+     }
+     return this->do_command(pg, cmdmap, format, std::move(input));
+   }
+--- ceph-17.2.3/src/crimson/common/logclient.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/common/logclient.cc	2022-09-04 22:22:38.523982693 +0200
+@@ -139,7 +139,7 @@ void LogChannel::update_config(map<strin
+ {
+   logger().debug(
+     "{} log_to_monitors {} log_to_syslog {} log_channels {} log_prios {}",
+-    __func__, log_to_monitors, log_to_syslog, log_channels, log_prios);
++    __func__, fmt::streamed(log_to_monitors), fmt::streamed(log_to_syslog), fmt::streamed(log_channels), fmt::streamed(log_prios));
+   bool to_monitors = (get_str_map_key(log_to_monitors, log_channel,
+                                       &CLOG_CONFIG_DEFAULT_KEY) == "true");
+   bool to_syslog = (get_str_map_key(log_to_syslog, log_channel,
+@@ -286,7 +286,7 @@ MessageURef LogClient::_get_mon_log_mess
+     ceph_assert(log_iter != log_queue.end());
+     out_log_queue.push_back(*log_iter);
+     last_log_sent = log_iter->seq;
+-    logger().debug(" will send {}", *log_iter);
++    logger().debug(" will send {}", fmt::streamed(*log_iter));
+     ++log_iter;
+   }
+   
+@@ -332,7 +332,7 @@ const EntityName& LogClient::get_myname(
+ 
+ seastar::future<> LogClient::handle_log_ack(Ref<MLogAck> m)
+ {
+-  logger().debug("handle_log_ack {}", *m);
++  logger().debug("handle_log_ack {}", fmt::streamed(*m));
+ 
+   version_t last = m->last;
+ 
+@@ -341,7 +341,7 @@ seastar::future<> LogClient::handle_log_
+     const LogEntry &entry(*q);
+     if (entry.seq > last)
+       break;
+-    logger().debug(" logged {}", entry);
++    logger().debug(" logged {}", fmt::streamed(entry));
+     q = log_queue.erase(q);
+   }
+   return seastar::now();
