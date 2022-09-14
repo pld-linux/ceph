@@ -70,6 +70,7 @@ Patch10:	%{name}-qat.patch
 Patch11:	%{name}-liburing.patch
 Patch12:	%{name}-glibc.patch
 Patch13:	%{name}-libfmt.patch
+Patch14:	%{name}-system-rocksdb.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -339,6 +340,7 @@ uruchamiania demonów.
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
+%patch14 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \

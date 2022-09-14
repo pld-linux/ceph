@@ -1,0 +1,8 @@
+--- ceph-17.2.3/src/crimson/os/alienstore/CMakeLists.txt.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/alienstore/CMakeLists.txt	2022-09-14 18:00:21.236806582 +0200
+@@ -1,4 +1,4 @@
+-include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/src/rocksdb/include")
++include_directories(SYSTEM PUBLIC $<TARGET_PROPERTY:RocksDB::RocksDB,INTERFACE_INCLUDE_DIRECTORIES>)
+ 
+ add_library(alien::cflags INTERFACE IMPORTED)
+ set_target_properties(alien::cflags PROPERTIES

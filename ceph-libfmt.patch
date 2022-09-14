@@ -1,76 +1,1606 @@
---- ceph-17.2.3/src/seastar/src/core/exception_hacks.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/core/exception_hacks.cc	2022-09-04 18:05:18.578088101 +0200
-@@ -98,7 +98,7 @@ void log_exception_trace() noexcept {
-     static thread_local bool nested = false;
-     if (!nested && exception_logger.is_enabled(log_level::trace)) {
-         nested = true;
--        exception_logger.trace("Throw exception at:\n{}", current_backtrace());
-+        exception_logger.trace("Throw exception at:\n{}", fmt::streamed(current_backtrace()));
-         nested = false;
-     }
- }
---- ceph-17.2.3/src/seastar/src/core/reactor_backend.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/core/reactor_backend.cc	2022-09-04 18:04:16.884860615 +0200
-@@ -235,7 +235,7 @@ void aio_storage_context::schedule_retry
-             // The next call to submit_work will call schedule_retry again.
-             if (f.failed()) {
-                 auto ex = f.get_exception();
--                seastar_logger.warn("aio_storage_context::schedule_retry failed: {}", std::move(ex));
-+                seastar_logger.warn("aio_storage_context::schedule_retry failed: {}", fmt::streamed(std::move(ex)));
-                 return;
-             }
-             auto result = f.get0();
-@@ -245,7 +245,7 @@ void aio_storage_context::schedule_retry
-                 try {
-                     nr_consumed = handle_aio_error(iocbs[0], result.error);
-                 } catch (...) {
--                    seastar_logger.error("aio retry failed: {}. Aborting.", std::current_exception());
-+                    seastar_logger.error("aio retry failed: {}. Aborting.", fmt::streamed(std::current_exception()));
-                     abort();
-                 }
-             } else {
-@@ -780,7 +780,7 @@ reactor_backend_epoll::wait_and_process(
-       try {
-         maybe_switch_steady_clock_timers(timeout, _steady_clock_timer_reactor_thread, _steady_clock_timer_timer_thread);
-       } catch (...) {
--        seastar_logger.error("Switching steady_clock timers back failed: {}. Aborting...", std::current_exception());
-+        seastar_logger.error("Switching steady_clock timers back failed: {}. Aborting...", fmt::streamed(std::current_exception()));
-         abort();
-       }
-     });
+--- ceph-17.2.3/src/include/types_fmt.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/include/types_fmt.h	2022-09-07 18:17:23.995310743 +0200
+@@ -6,6 +6,8 @@
+  */
+ 
+ #include <fmt/format.h>
++#include <fmt/ostream.h>
++#include <boost/intrusive_ptr.hpp>
+ 
+ #include <string_view>
+ 
+@@ -26,3 +28,21 @@ struct fmt::formatter<std::map<A, B, Com
+     return fmt::format_to(ctx.out(), "}}");
+   }
+ };
++
++template <class A, class B>
++struct fmt::formatter<std::pair<A, B>> : ostream_formatter {};
++
++template <class A, class Alloc>
++struct fmt::formatter<std::vector<A, Alloc>> : ostream_formatter {};
++
++template <typename T>
++struct fmt::formatter<std::optional<T>> : ostream_formatter {};
++
++template <class A, class Comp, class Alloc>
++struct fmt::formatter<std::set<A, Comp, Alloc>> : ostream_formatter {};
++
++template <uint8_t S>
++struct fmt::formatter<sha_digest_t<S>> : ostream_formatter {};
++
++template <typename T>
++struct fmt::formatter<boost::intrusive_ptr<T>> : ostream_formatter {};
 --- ceph-17.2.3/src/common/Journald.cc.orig	2022-09-04 18:08:09.890385180 +0200
-+++ ceph-17.2.3/src/common/Journald.cc	2022-09-04 18:09:12.196980758 +0200
-@@ -151,7 +151,7 @@ MESSAGE
-       clog_type_to_syslog_level(le.prio),
-       le.stamp.to_nsec(),
-       le.name.to_str(),
--      le.rank,
-+      fmt::streamed(le.rank),
-       le.seq,
-       le.channel);
++++ ceph-17.2.3/src/common/Journald.cc	2022-09-07 17:20:33.128007133 +0200
+@@ -21,6 +21,7 @@
+ #include "common/LogEntry.h"
+ #include "log/Entry.h"
+ #include "log/SubsystemMap.h"
++#include "msg/msg_fmt.h"
  
---- ceph-17.2.3/src/seastar/src/core/future.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/core/future.cc	2022-09-04 18:12:07.369486036 +0200
-@@ -207,7 +207,7 @@ void future_state_base::rethrow_exceptio
  
- void report_failed_future(const std::exception_ptr& eptr) noexcept {
-     ++engine()._abandoned_failed_futures;
--    seastar_logger.warn("Exceptional future ignored: {}, backtrace: {}", eptr, current_backtrace());
-+    seastar_logger.warn("Exceptional future ignored: {}, backtrace: {}", fmt::streamed(eptr), fmt::streamed(current_backtrace()));
+ namespace ceph::logging {
+--- ceph-17.2.3/src/common/hobject_fmt.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/common/hobject_fmt.h	2022-09-07 18:23:08.743232468 +0200
+@@ -50,3 +50,6 @@ template <> struct fmt::formatter<hobjec
+ 			  ho.get_bitwise_key_u32(), v, ho.snap);
+   }
+ };
++
++template <>
++struct fmt::formatter<ghobject_t> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/admin/admin_socket.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/admin/admin_socket.cc	2022-09-08 17:39:11.969465247 +0200
+@@ -19,6 +19,7 @@
+ #include "messages/MCommandReply.h"
+ #include "crimson/common/log.h"
+ #include "crimson/net/Socket.h"
++#include "include/types_fmt.h"
+ 
+ using namespace crimson::common;
+ 
+--- ceph-17.2.3/src/crimson/admin/osd_admin.cc.orig	2022-09-04 21:48:44.290691903 +0200
++++ ceph-17.2.3/src/crimson/admin/osd_admin.cc	2022-09-08 21:32:52.391069817 +0200
+@@ -12,6 +12,7 @@
+ #include <seastar/core/scollectd_api.hh>
+ 
+ #include "common/config.h"
++#include "common/hobject_fmt.h"
+ #include "crimson/admin/admin_socket.h"
+ #include "crimson/common/log.h"
+ #include "crimson/osd/exceptions.h"
+@@ -299,7 +300,7 @@ static ghobject_t test_ops_get_object_na
+       // the return type of `fmt::format` is `std::string`
+       using namespace fmt::literals;
+       throw std::invalid_argument{
+-        "Invalid pool '{}'"_format(*pool_arg)
++	fmt::format("Invalid pool '{}'", *pool_arg)
+       };
+     }
+     return pool;
+--- ceph-17.2.3/src/crimson/admin/pg_commands.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/admin/pg_commands.cc	2022-09-14 20:59:47.803920736 +0200
+@@ -13,6 +13,7 @@
+ #include "crimson/admin/admin_socket.h"
+ #include "crimson/osd/osd.h"
+ #include "crimson/osd/pg.h"
++#include "osd/osd_types_fmt.h"
+ 
+ 
+ using crimson::osd::OSD;
+--- ceph-17.2.3/src/crimson/common/gated.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/common/gated.h	2022-09-05 17:55:05.174809923 +0200
+@@ -28,11 +28,11 @@ class Gated {
+     ).handle_exception([what, &who] (std::exception_ptr eptr) {
+       if (*eptr.__cxa_exception_type() == typeid(system_shutdown_exception)) {
+ 	gated_logger().debug(
+-	    "{}, {} skipped, system shutdown", who, what);
++	    "{}, {} skipped, system shutdown", fmt::streamed(who), what);
+ 	return;
+       }
+       gated_logger().error(
+-          "{} dispatch() {} caught exception: {}", who, what, eptr);
++          "{} dispatch() {} caught exception: {}", fmt::streamed(who), what, eptr);
+       assert(*eptr.__cxa_exception_type()
+ 	== typeid(seastar::gate_closed_exception));
+     });
+--- ceph-17.2.3/src/crimson/common/logclient.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/common/logclient.cc	2022-09-08 16:51:12.587841466 +0200
+@@ -1,5 +1,6 @@
+ #include "crimson/common/logclient.h"
+ #include "include/str_map.h"
++#include "include/types_fmt.h"
+ #include "messages/MLog.h"
+ #include "messages/MLogAck.h"
+ #include "messages/MMonGetVersion.h"
+@@ -286,7 +287,7 @@ MessageURef LogClient::_get_mon_log_mess
+     ceph_assert(log_iter != log_queue.end());
+     out_log_queue.push_back(*log_iter);
+     last_log_sent = log_iter->seq;
+-    logger().debug(" will send {}", *log_iter);
++    logger().debug(" will send {}", fmt::streamed(*log_iter));
+     ++log_iter;
+   }
+   
+@@ -332,7 +333,7 @@ const EntityName& LogClient::get_myname(
+ 
+ seastar::future<> LogClient::handle_log_ack(Ref<MLogAck> m)
+ {
+-  logger().debug("handle_log_ack {}", *m);
++  logger().debug("handle_log_ack {}", fmt::streamed(*m));
+ 
+   version_t last = m->last;
+ 
+@@ -341,7 +342,7 @@ seastar::future<> LogClient::handle_log_
+     const LogEntry &entry(*q);
+     if (entry.seq > last)
+       break;
+-    logger().debug(" logged {}", entry);
++    logger().debug(" logged {}", fmt::streamed(entry));
+     q = log_queue.erase(q);
+   }
+   return seastar::now();
+--- ceph-17.2.3/src/crimson/mgr/client.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/mgr/client.cc	2022-09-05 06:26:48.430701643 +0200
+@@ -134,7 +134,7 @@ seastar::future<> Client::handle_mgr_map
+ seastar::future<> Client::handle_mgr_conf(crimson::net::ConnectionRef,
+                                           Ref<MMgrConfigure> m)
+ {
+-  logger().info("{} {}", __func__, *m);
++  logger().info("{} {}", __func__, fmt::streamed(*m));
+ 
+   auto report_period = std::chrono::seconds{m->stats_period};
+   if (report_period.count()) {
+--- ceph-17.2.3/src/crimson/mon/MonClient.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/mon/MonClient.cc	2022-09-08 19:41:15.770921116 +0200
+@@ -14,6 +14,8 @@
+ #include "auth/RotatingKeyRing.h"
+ 
+ #include "common/hostname.h"
++#include "include/types_fmt.h"
++#include "msg/msg_fmt.h"
+ 
+ #include "crimson/auth/KeyRing.h"
+ #include "crimson/common/config_proxy.h"
+@@ -217,7 +219,7 @@ Connection::do_auth_single(Connection::r
+     break;
+   case request_t::general:
+     if (int ret = auth->build_request(m->auth_payload); ret) {
+-      logger().error("missing/bad key for '{}'", local_conf()->name);
++      logger().error("missing/bad key for '{}'", fmt::streamed(local_conf()->name));
+       throw std::system_error(make_error_code(
+         crimson::net::error::negotiation_failure));
+     }
+@@ -225,7 +225,7 @@ Connection::do_auth_single(Connection::r
+   default:
+     assert(0);
+   }
+-  logger().info("sending {}", *m);
++  logger().info("sending {}", fmt::streamed(*m));
+   return conn->send(std::move(m)).then([this] {
+     logger().info("waiting");
+     return auth_reply.get_shared_future();
+@@ -237,8 +237,8 @@ Connection::do_auth_single(Connection::r
+     }
+     logger().info(
+       "do_auth_single: mon {} => {} returns {}: {}",
+-      conn->get_messenger()->get_myaddr(),
+-      conn->get_peer_addr(), *m, m->result);
++      conn->get_messenger()->get_myaddr(),
++      conn->get_peer_addr(), fmt::streamed(*m), m->result);
+     auto p = m->result_bl.cbegin();
+     auto ret = auth->handle_response(m->result, p,
+ 				     nullptr, nullptr);
+@@ -807,8 +807,8 @@ seastar::future<> Client::handle_auth_re
+ {
+   logger().info(
+     "handle_auth_reply mon {} => {} returns {}: {}",
+-    conn->get_messenger()->get_myaddr(),
+-    conn->get_peer_addr(), *m, m->result);
++    conn->get_messenger()->get_myaddr(),
++    conn->get_peer_addr(), fmt::streamed(*m), m->result);
+   auto found = std::find_if(pending_conns.begin(), pending_conns.end(),
+                             [peer_addr = conn->get_peer_addr()](auto& mc) {
+                               return mc->is_my_peer(peer_addr);
+--- ceph-17.2.3/src/crimson/net/Connection.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/net/Connection.h	2022-09-06 16:55:17.884653125 +0200
+@@ -173,3 +173,6 @@ inline std::ostream& operator<<(std::ost
  }
  
- void report_failed_future(const future_state_base& state) noexcept {
---- ceph-17.2.3/src/seastar/src/core/fstream.cc.orig	2022-08-30 09:00:26.425084492 +0200
-+++ ceph-17.2.3/src/seastar/src/core/fstream.cc	2022-09-04 18:10:48.772037230 +0200
-@@ -511,7 +511,7 @@ future<data_sink> make_file_data_sink(fi
-                     std::rethrow_exception(std::move(ex));
-                 } catch (...) {
-                     std::throw_with_nested(std::runtime_error(fmt::format("While handling failed construction of data_sink, caught exception: {}",
--                                fut.get_exception())));
-+                                fmt::streamed(fut.get_exception()))));
-                 }
-             }
-             return make_exception_future<data_sink>(std::move(ex));
+ } // namespace crimson::net
++
++template <>
++struct fmt::formatter<crimson::net::Connection> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/net/SocketConnection.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/net/SocketConnection.h	2022-09-08 21:30:24.173383344 +0200
+@@ -104,3 +104,6 @@ class SocketConnection : public Connecti
+ };
+ 
+ } // namespace crimson::net
++
++template <>
++struct fmt::formatter<crimson::net::SocketConnection> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/net/ProtocolV2.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/net/ProtocolV2.cc	2022-09-09 19:40:17.957323611 +0200
+@@ -7,6 +7,7 @@
+ #include <fmt/format.h>
+ #include "include/msgr.h"
+ #include "include/random.h"
++#include "msg/msg_fmt.h"
+ 
+ #include "crimson/auth/AuthClient.h"
+ #include "crimson/auth/AuthServer.h"
+@@ -604,7 +605,7 @@ seastar::future<> ProtocolV2::client_aut
+       return handle_auth_reply();
+     });
+   } catch (const crimson::auth::error& e) {
+-    logger().error("{} get_initial_auth_request returned {}", conn, e);
++    logger().error("{} get_initial_auth_request returned {}", conn, fmt::streamed(e));
+     abort_in_close(*this, true);
+     return seastar::now();
+   }
+--- ceph-17.2.3/src/crimson/net/Socket.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/net/Socket.cc	2022-09-08 21:47:01.195369872 +0200
+@@ -5,6 +5,7 @@
+ 
+ #include <seastar/core/when_all.hh>
+ 
++#include "msg/msg_fmt.h"
+ #include "crimson/common/log.h"
+ #include "Errors.h"
+ 
+--- ceph-17.2.3/src/crimson/net/SocketMessenger.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/net/SocketMessenger.cc	2022-09-08 21:28:14.640010471 +0200
+@@ -18,11 +18,16 @@
+ 
+ #include <tuple>
+ #include <boost/functional/hash.hpp>
++#include <fmt/os.h>
+ 
+ #include "auth/Auth.h"
++#include "msg/msg_fmt.h"
+ #include "Errors.h"
+ #include "Socket.h"
+ 
++template <>
++struct fmt::formatter<crimson::net::SocketMessenger> : ostream_formatter {};
++
+ namespace {
+   seastar::logger& logger() {
+     return crimson::get_logger(ceph_subsys_ms);
+--- ceph-17.2.3/src/crimson/os/cyanstore/cyan_store.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/cyanstore/cyan_store.cc	2022-09-12 21:46:02.891292495 +0200
+@@ -7,8 +7,10 @@
+ #include <fmt/format.h>
+ #include <fmt/ostream.h>
+ 
++#include "common/hobject_fmt.h"
+ #include "common/safe_io.h"
+ #include "os/Transaction.h"
++#include "osd/osd_types_fmt.h"
+ 
+ #include "crimson/common/buffer_io.h"
+ #include "crimson/common/config_proxy.h"
+@@ -115,7 +117,7 @@ CyanStore::mkfs_ertr::future<> CyanStore
+       } else {
+         osd_fsid = new_osd_fsid;
+       }
+-      return write_meta("fsid", fmt::format("{}", osd_fsid));
++      return write_meta("fsid", fmt::format("{}", fmt::streamed(osd_fsid)));
+     } else if (r < 0) {
+       return crimson::stateful_ec{ singleton_ec<read_meta_errmsg>() };
+     } else {
+@@ -123,7 +125,7 @@ CyanStore::mkfs_ertr::future<> CyanStore
+       if (!osd_fsid.parse(fsid_str.c_str())) {
+         return crimson::stateful_ec{ singleton_ec<parse_fsid_errmsg>() };
+       } else if (osd_fsid != new_osd_fsid) {
+-        logger().error("on-disk fsid {} != provided {}", osd_fsid, new_osd_fsid);
++        logger().error("on-disk fsid {} != provided {}", fmt::streamed(osd_fsid), fmt::streamed(new_osd_fsid));
+         return crimson::stateful_ec{ singleton_ec<match_ofsid_errmsg>() };
+       } else {
+ 	return mkfs_ertr::now();
+--- ceph-17.2.3/src/crimson/os/seastore/cache.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/cache.h	2022-09-14 16:25:29.215651215 +0200
+@@ -8,6 +8,7 @@
+ #include "seastar/core/shared_future.hh"
+ 
+ #include "include/buffer.h"
++#include "include/types_fmt.h"
+ 
+ #include "crimson/os/seastore/logging.h"
+ #include "crimson/os/seastore/seastore_types.h"
+@@ -330,7 +331,7 @@ public:
+ 	} else {
+ 	  SUBDEBUGT(seastore_cache,
+ 	    "Read extent at offset {} in cache: {}",
+-	    t, offset, *ref);
++	    t, offset, fmt::streamed(*ref));
+ 	  touch_extent(*ref);
+ 	  t.add_to_read_set(ref);
+ 	  return get_extent_iertr::make_ready_future<TCachedExtentRef<T>>(
+--- ceph-17.2.3/src/crimson/os/seastore/cached_extent.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/cached_extent.h	2022-09-10 07:10:31.584611548 +0200
+@@ -837,3 +837,12 @@ using lextent_list_t = addr_extent_list_
+   laddr_t, TCachedExtentRef<T>>;
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::CachedExtent> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::LogicalCachedExtent> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::LBAPin> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/object_data_handler.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/object_data_handler.h	2022-09-11 17:30:31.253984098 +0200
+@@ -119,3 +119,6 @@ private:
+ };
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::ObjectDataBlock> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/onode.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode.h	2022-09-11 18:15:39.632135931 +0200
+@@ -81,3 +81,6 @@ public:
+ std::ostream& operator<<(std::ostream &out, const Onode &rhs);
+ using OnodeRef = boost::intrusive_ptr<Onode>;
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::Onode> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/root_block.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/root_block.h	2022-09-09 21:38:11.463439115 +0200
+@@ -88,3 +88,6 @@ struct RootBlock : CachedExtent {
+ using RootBlockRef = RootBlock::Ref;
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::RootBlock> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/seastore_types.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/seastore_types.h	2022-09-10 07:02:01.794683539 +0200
+@@ -8,6 +8,7 @@
+ #include <optional>
+ #include <iostream>
+ #include <vector>
++#include <fmt/ostream.h>
+ 
+ #include "include/byteorder.h"
+ #include "include/denc.h"
+@@ -1589,3 +1590,30 @@ struct denc_traits<crimson::os::seastore
+            reinterpret_cast<char*>(&o));
+   }
+ };
++
++template <>
++struct fmt::formatter<crimson::os::seastore::segment_id_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::paddr_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::device_type_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::journal_seq_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::delta_info_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::laddr_list_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::extent_types_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::extent_info_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::segment_header_t> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/segment_manager.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/segment_manager.h	2022-09-09 20:43:03.983800973 +0200
+@@ -261,3 +261,12 @@ WRITE_CLASS_DENC(
+ WRITE_CLASS_DENC(
+   crimson::os::seastore::block_sm_superblock_t
+ )
++
++template <>
++struct fmt::formatter<crimson::os::seastore::block_sm_superblock_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::segment_manager_config_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::Segment::segment_state_t> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/transaction.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/transaction.h	2022-09-09 21:34:09.507446054 +0200
+@@ -4,6 +4,7 @@
+ #pragma once
+ 
+ #include <iostream>
++#include <fmt/ostream.h>
+ 
+ #include <boost/intrusive/list.hpp>
+ 
+@@ -505,3 +506,6 @@ template <typename T>
+ using with_trans_ertr = typename T::base_ertr::template extend<crimson::ct_error::eagain>;
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::Transaction::src_t> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/transaction_manager.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/transaction_manager.h	2022-09-14 16:25:42.966374227 +0200
+@@ -163,7 +163,7 @@ public:
+ 	lba_manager->add_pin(extent.get_pin());
+       }
+     ).si_then([FNAME, &t](auto ref) mutable -> ret {
+-      SUBDEBUGT(seastore_tm, "got extent {}", t, *ref);
++      SUBDEBUGT(seastore_tm, "got extent {}", t, fmt::streamed(*ref));
+       return pin_to_extent_ret<T>(
+ 	interruptible::ready_future_marker{},
+ 	std::move(ref));
+@@ -313,7 +313,7 @@ public:
+       ext->set_pin(std::move(ref));
+       stats.extents_allocated_total++;
+       stats.extents_allocated_bytes += len;
+-      SUBDEBUGT(seastore_tm, "new extent: {}, laddr_hint: {}", t, *ext, laddr_hint);
++      SUBDEBUGT(seastore_tm, "new extent: {}, laddr_hint: {}", t, fmt::streamed(*ext), laddr_hint);
+       return alloc_extent_iertr::make_ready_future<TCachedExtentRef<T>>(
+ 	std::move(ext));
+     });
+--- ceph-17.2.3/src/crimson/os/seastore/extent_reader.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/extent_reader.cc	2022-09-09 21:47:09.444920952 +0200
+@@ -44,7 +44,7 @@ ExtentReader::read_segment_header(segmen
+       logger().debug(
+ 	"ExtentReader::read_segment_header: segment {} unable to decode "
+ 	"header, skipping -- {}",
+-	segment, e);
++	segment, fmt::streamed(e));
+       return crimson::ct_error::enodata::make();
+     }
+     logger().debug(
+--- ceph-17.2.3/src/crimson/os/seastore/journal.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/journal.cc	2022-09-09 21:45:01.061536954 +0200
+@@ -2,6 +2,7 @@
+ // vim: ts=8 sw=2 smarttab
+ 
+ #include <iostream>
++#include <fmt/os.h>
+ 
+ #include <boost/iterator/counting_iterator.hpp>
+ 
+--- ceph-17.2.3/src/crimson/os/seastore/seastore.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/seastore.cc	2022-09-12 21:36:15.057012562 +0200
+@@ -13,9 +13,11 @@
+ #include <seastar/core/fstream.hh>
+ #include <seastar/core/shared_mutex.hh>
+ 
++#include "common/hobject_fmt.h"
+ #include "common/safe_io.h"
+ #include "include/stringify.h"
+ #include "os/Transaction.h"
++#include "osd/osd_types_fmt.h"
+ 
+ #include "crimson/common/buffer_io.h"
+ 
+@@ -124,7 +126,7 @@ void SeaStore::register_metrics()
+ 
+   for (auto& [op_type, label] : labels_by_op_type) {
+     auto desc = fmt::format("latency of seastore operation (optype={})",
+-                            op_type);
++                            static_cast<uint8_t>(op_type));
+     metrics.add_group(
+       "seastore",
+       {
+--- ceph-17.2.3/src/crimson/os/seastore/seastore_types.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/seastore_types.cc	2022-09-09 20:12:53.796095116 +0200
+@@ -12,6 +12,9 @@ seastar::logger& logger() {
+ 
+ }
+ 
++template <>
++struct fmt::formatter<ceph::buffer::error> : ostream_formatter {};
++
+ namespace crimson::os::seastore {
+ 
+ std::ostream& operator<<(std::ostream& out, const seastore_meta_t& meta)
+--- ceph-17.2.3/src/crimson/os/seastore/collection_manager/collection_flat_node.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/collection_manager/collection_flat_node.h	2022-09-11 14:36:42.815251945 +0200
+@@ -182,3 +182,6 @@ struct CollectionNode
+ };
+ using CollectionNodeRef = CollectionNode::CollectionNodeRef;
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::collection_manager::CollectionNode> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/collection_manager/collection_flat_node.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/collection_manager/collection_flat_node.cc	2022-09-12 21:40:23.250020447 +0200
+@@ -3,6 +3,7 @@
+ 
+ #include "include/buffer.h"
+ #include "osd/osd_types.h"
++#include "osd/osd_types_fmt.h"
+ #include "crimson/os/seastore/transaction_manager.h"
+ #include "crimson/os/seastore/collection_manager/collection_flat_node.h"
+ 
+--- ceph-17.2.3/src/crimson/os/seastore/lba_manager/btree/btree_range_pin.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/lba_manager/btree/btree_range_pin.h	2022-09-10 07:02:50.047200663 +0200
+@@ -4,6 +4,7 @@
+ #pragma once
+ 
+ #include <boost/intrusive/set.hpp>
++#include <fmt/ostream.h>
+ 
+ #include "crimson/os/seastore/cached_extent.h"
+ #include "crimson/os/seastore/seastore_types.h"
+@@ -290,3 +291,6 @@ public:
+ };
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::lba_manager::btree::btree_range_pin_t> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/lba_manager/btree/lba_btree_node.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/lba_manager/btree/lba_btree_node.h	2022-09-10 07:35:43.533763577 +0200
+@@ -563,3 +563,9 @@ struct LBALeafNode
+ using LBALeafNodeRef = TCachedExtentRef<LBALeafNode>;
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::lba_manager::btree::LBAInternalNode> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::lba_manager::btree::LBALeafNode> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/omap_manager/btree/omap_btree_node.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/omap_manager/btree/omap_btree_node.h	2022-09-10 08:25:44.417337428 +0200
+@@ -114,3 +114,6 @@ omap_load_extent_iertr::future<OMapNodeR
+ omap_load_extent(omap_context_t oc, laddr_t laddr, depth_t depth);
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::omap_manager::OMapNode> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/omap_manager/btree/omap_btree_node_impl.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/omap_manager/btree/omap_btree_node_impl.h	2022-09-10 13:55:41.723892064 +0200
+@@ -235,3 +235,15 @@ using OMapLeafNodeRef = OMapLeafNode::OM
+ std::ostream &operator<<(std::ostream &out, const omap_inner_key_t &rhs);
+ std::ostream &operator<<(std::ostream &out, const omap_leaf_key_t &rhs);
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::omap_manager::OMapInnerNode> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::omap_manager::OMapLeafNode> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<boost::intrusive_ptr<crimson::os::seastore::omap_manager::OMapInnerNode>> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<boost::intrusive_ptr<crimson::os::seastore::omap_manager::OMapLeafNode>> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/omap_manager/btree/btree_omap_manager.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/omap_manager/btree/btree_omap_manager.cc	2022-09-10 07:53:44.517113694 +0200
+@@ -130,7 +130,7 @@ BtreeOMapManager::omap_set_key(
+   const std::string &key,
+   const ceph::bufferlist &value)
+ {
+-  logger().debug("{}: {} -> {}", __func__, key, value);
++  logger().debug("{}: {} -> {}", __func__, key, fmt::streamed(value));
+   return get_omap_root(
+     get_omap_context(t, omap_root.hint),
+     omap_root
+--- ceph-17.2.3/src/crimson/os/seastore/omap_manager/btree/omap_btree_node_impl.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/omap_manager/btree/omap_btree_node_impl.cc	2022-09-10 12:21:38.205877267 +0200
+@@ -136,7 +136,7 @@ OMapInnerNode::insert(
+   const std::string &key,
+   const ceph::bufferlist &value)
+ {
+-  logger().debug("OMapInnerNode: {}  {}->{}",  __func__, key, value);
++  logger().debug("OMapInnerNode: {}  {}->{}",  __func__, key, fmt::streamed(value));
+   auto child_pt = get_containing_child(key);
+   assert(child_pt != iter_end());
+   auto laddr = child_pt->get_val();
+@@ -432,7 +432,7 @@ OMapLeafNode::insert(
+   const std::string &key,
+   const ceph::bufferlist &value)
+ {
+-  logger().debug("OMapLeafNode: {}, {} -> {}", __func__, key, value);
++  logger().debug("OMapLeafNode: {}, {} -> {}", __func__, key, fmt::streamed(value));
+   bool overflow = extent_will_overflow(key.size(), value.length());
+   if (!overflow) {
+     if (!is_pending()) {
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_extent_accessor.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_extent_accessor.h	2022-09-10 21:53:11.326721372 +0200
+@@ -141,7 +141,7 @@ class DeltaRecorderT final: public Delta
+         SUBDEBUG(seastore_onode, "decoding SPLIT ...");
+         auto split_at = StagedIterator::decode(
+             mut.get_read(), mut.get_length(), delta);
+-        SUBDEBUG(seastore_onode, "apply split_at={} ...", split_at);
++        SUBDEBUG(seastore_onode, "apply split_at={} ...", fmt::streamed(split_at));
+         layout_t::split(mut, stage, split_at);
+         break;
+       }
+@@ -159,7 +159,7 @@ class DeltaRecorderT final: public Delta
+         SUBDEBUG(seastore_onode,
+             "apply split_at={}, {}, {}, insert_pos({}), insert_stage={}, "
+             "insert_size={}B ...",
+-            split_at, key, value, insert_pos, insert_stage, insert_size);
++            fmt::streamed(split_at), key, value, insert_pos, insert_stage, insert_size);
+         layout_t::template split_insert<KeyT::HOBJ>(
+           mut, stage, split_at, key, value, insert_pos, insert_stage, insert_size);
+         break;
+@@ -206,13 +206,13 @@ class DeltaRecorderT final: public Delta
+       default:
+         SUBERROR(seastore_onode,
+             "got unknown op {} when replay {}",
+-            op, node);
++            static_cast<uint8_t>(op), node);
+         ceph_abort("fatal error");
+       }
+     } catch (buffer::error& e) {
+       SUBERROR(seastore_onode,
+           "got decode error {} when replay {}",
+-          e, node);
++          fmt::streamed(e), node);
+       ceph_abort("fatal error");
+     }
+   }
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_extent_manager.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_extent_manager.h	2022-09-10 20:22:25.681931141 +0200
+@@ -99,3 +99,6 @@ inline std::ostream& operator<<(std::ost
+ }
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::onode::NodeExtent> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_layout.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_layout.h	2022-09-10 23:18:51.518511129 +0200
+@@ -716,7 +716,7 @@ class NodeLayoutT final : public Interna
+       SUBDEBUG(seastore_onode,
+           "-- located split_at({}), insert_pos({}), is_insert_left={}, "
+           "split_size={}B(target={}B, current={}B)",
+-          split_at, insert_pos, is_insert_left,
++          fmt::streamed(split_at), insert_pos, is_insert_left,
+           split_size, target_split_size, filled_size());
+       // split_size can be larger than target_split_size in strategy B
+       // assert(split_size <= target_split_size);
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/tree_utils.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/tree_utils.h	2022-09-14 16:25:35.992674217 +0200
+@@ -304,7 +304,7 @@ class TreeBuilder {
+     logger().debug("[{}] insert {} -> {}",
+                    iter_rd - kvs.random_begin(),
+                    key_hobj_t{p_kv->key},
+-                   p_kv->value);
++                   fmt::streamed(p_kv->value));
+     return tree->insert(
+         t, p_kv->key, {p_kv->value.get_payload_size()}
+     ).si_then([&t, this, p_kv](auto ret) {
+@@ -397,7 +397,7 @@ class TreeBuilder {
+     logger().debug("[{}] erase {} -> {}",
+                    iter_rd - kvs.random_begin(),
+                    key_hobj_t{p_kv->key},
+-                   p_kv->value);
++                   fmt::streamed(p_kv->value));
+     return tree->erase(t, p_kv->key
+     ).si_then([&t, this, p_kv] (auto size) {
+       ceph_assert(size == 1);
+@@ -497,7 +497,7 @@ class TreeBuilder {
+   eagain_ifuture<> get_stats(Transaction& t) {
+     return tree->get_stats_slow(t
+     ).si_then([](auto stats) {
+-      logger().warn("{}", stats);
++      logger().warn("{}", fmt::streamed(stats));
+     });
+   }
+ 
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/value.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/value.h	2022-09-10 20:44:01.346243614 +0200
+@@ -330,3 +330,9 @@ std::unique_ptr<ValueDeltaRecorder>
+ build_value_recorder_by_type(ceph::bufferlist& encoded, const value_magic_t& magic);
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::onode::value_config_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::onode::value_header_t> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/fltree_onode_manager.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/fltree_onode_manager.cc	2022-09-11 13:59:47.892898649 +0200
+@@ -1,6 +1,7 @@
+ // -*- mode:C++; tab-width:8; c-basic-offset:2; indent-tabs-mode:nil -*-
+ // vim: ts=8 sw=2 smarttab
+ 
++#include "common/hobject_fmt.h"
+ #include "crimson/os/seastore/logging.h"
+ 
+ #include "crimson/os/seastore/onode_manager/staged-fltree/fltree_onode_manager.h"
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_extent_manager/dummy.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_extent_manager/dummy.h	2022-09-10 20:23:37.035656315 +0200
+@@ -190,3 +190,6 @@ class DummyNodeExtentManager final: publ
+ };
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::onode::DummyNodeExtent> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_extent_manager/seastore.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/node_extent_manager/seastore.h	2022-09-10 20:35:15.305445076 +0200
+@@ -217,3 +217,6 @@ class SeastoreNodeExtentManager final: p
+ };
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::onode::SeastoreNodeExtent> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/stages/key_layout.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/stages/key_layout.h	2022-09-10 18:15:40.701599795 +0200
+@@ -941,3 +941,9 @@ void ns_oid_view_t::test_append(const fu
+ }
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::onode::key_hobj_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::os::seastore::onode::key_view_t> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/stages/stage_types.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/onode_manager/staged-fltree/stages/stage_types.h	2022-09-10 19:52:32.398311751 +0200
+@@ -462,3 +462,9 @@ struct node_stats_t {
+ };
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::os::seastore::onode::MatchHistory> : ostream_formatter {};
++
++template <crimson::os::seastore::onode::match_stage_t STAGE>
++struct fmt::formatter<crimson::os::seastore::onode::staged_position_t<STAGE>> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/os/seastore/random_block_manager/nvme_manager.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/random_block_manager/nvme_manager.cc	2022-09-11 19:09:02.343128795 +0200
+@@ -154,7 +154,7 @@ NVMeManager::mkfs_ertr::future<> NVMeMan
+ 	super.blocks_per_segment = config.blocks_per_segment;
+ 	super.device_id = config.device_id;
+ 
+-	logger().debug(" super {} ", super);
++	logger().debug(" super {} ", fmt::streamed(super));
+ 	// write super block
+ 	return write_rbm_header().safe_then([this] {
+ 	  return initialize_blk_alloc_area();
+@@ -227,7 +227,7 @@ NVMeManager::find_block_ret NVMeManager:
+ 	      }
+ 	      addr += super.block_size;
+ 	      logger().debug("find_free_list: allocated: {} alloc_extent {}",
+-			      allocated, alloc_extent);
++			      allocated, fmt::streamed(alloc_extent));
+ 	      if (((uint64_t)size)/super.block_size == allocated) {
+ 		return seastar::stop_iteration::yes;
+ 	      } else if (addr >= super.start_data_area) {
+@@ -271,7 +271,7 @@ NVMeManager::allocate_ret NVMeManager::a
+   return find_free_block(t, size
+       ).safe_then([this, &t] (auto alloc_extent) mutable
+ 	-> allocate_ertr::future<paddr_t> {
+-	logger().debug("after find_free_block: allocated {}", alloc_extent);
++	logger().debug("after find_free_block: allocated {}", fmt::streamed(alloc_extent));
+ 	if (!alloc_extent.empty()) {
+ 	  rbm_alloc_delta_t alloc_info;
+ 	  for (auto p : alloc_extent) {
+@@ -626,7 +626,7 @@ NVMeManager::read_ertr::future<rbm_metad
+         return crimson::ct_error::input_output_error::make();
+       }
+     }
+-    logger().debug(" got {} ", super);
++    logger().debug(" got {} ", fmt::streamed(super));
+     return read_ertr::future<rbm_metadata_header_t>(
+       read_ertr::ready_future_marker{},
+       super_block
+--- ceph-17.2.3/src/crimson/os/seastore/segment_manager/ephemeral.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/os/seastore/segment_manager/ephemeral.cc	2022-09-09 20:40:20.735269610 +0200
+@@ -96,7 +96,7 @@ EphemeralSegmentManager::init_ertr::futu
+ {
+   logger().debug(
+     "Initing ephemeral segment manager with config {}",
+-    config);
++    fmt::streamed(config));
+ 
+   meta = seastore_meta_t{};
+ 
+--- ceph-17.2.3/src/crimson/osd/backfill_state.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/backfill_state.cc	2022-09-11 20:11:11.288470838 +0200
+@@ -5,6 +5,7 @@
+ #include <boost/type_index.hpp>
+ 
+ #include "crimson/osd/backfill_state.h"
++#include "osd/osd_types_fmt.h"
+ 
+ namespace {
+   seastar::logger& logger() {
+@@ -423,7 +424,7 @@ boost::statechart::result
+ BackfillState::ReplicasScanning::react(ReplicaScanned evt)
+ {
+   logger().debug("{}: got scan result from osd={}, result={}",
+-                 __func__, evt.from, evt.result);
++                 __func__, evt.from, fmt::streamed(evt.result));
+   // TODO: maybe we'll be able to move waiting_on_backfill from
+   // the machine to the state.
+   ceph_assert(peering_state().is_backfill_target(evt.from));
+--- ceph-17.2.3/src/crimson/osd/heartbeat.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/heartbeat.cc	2022-09-11 20:44:43.140556321 +0200
+@@ -4,9 +4,11 @@
+ #include "heartbeat.h"
+ 
+ #include <boost/range/join.hpp>
++#include <fmt/os.h>
+ 
+ #include "messages/MOSDPing.h"
+ #include "messages/MOSDFailure.h"
++#include "msg/msg_fmt.h"
+ 
+ #include "crimson/common/config_proxy.h"
+ #include "crimson/common/formatter.h"
+@@ -17,6 +19,9 @@
+ 
+ #include "osd/OSDMap.h"
+ 
++template <>
++struct fmt::formatter<Heartbeat::Connection> : ostream_formatter {};
++
+ using std::set;
+ using std::string;
+ using crimson::common::local_conf;
+@@ -393,7 +398,7 @@ void Heartbeat::Connection::accepted(cri
+   if (!conn) {
+     if (accepted_conn->get_peer_addr() == listener.get_peer_addr(type)) {
+       logger().info("Heartbeat::Connection::accepted(): "
+-                    "{} racing resolved", *this);
++                    "{} racing resolved", fmt::streamed(*this));
+       conn = accepted_conn;
+       set_connected();
+     }
+@@ -410,7 +415,7 @@ void Heartbeat::Connection::replaced()
+   conn = msgr.connect(replaced_conn->get_peer_addr(),
+                       replaced_conn->get_peer_name());
+   racing_detected = true;
+-  logger().warn("Heartbeat::Connection::replaced(): {} racing", *this);
++  logger().warn("Heartbeat::Connection::replaced(): {} racing", fmt::streamed(*this));
+   assert(conn != replaced_conn);
+   assert(conn->is_connected());
+ }
+--- ceph-17.2.3/src/crimson/osd/ops_executer.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/ops_executer.cc	2022-09-12 18:50:57.937349213 +0200
+@@ -18,6 +18,9 @@
+ #include "crimson/osd/exceptions.h"
+ #include "crimson/osd/pg.h"
+ #include "crimson/osd/watch.h"
++#include "common/hobject_fmt.h"
++#include "msg/msg_fmt.h"
++#include "osd/osd_types_fmt.h"
+ #include "osd/ClassHandler.h"
+ 
+ namespace {
+--- ceph-17.2.3/src/crimson/osd/osd.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd.cc	2022-09-11 21:59:01.223608155 +0200
+@@ -10,6 +10,7 @@
+ #include <boost/smart_ptr/make_local_shared.hpp>
+ #include <fmt/format.h>
+ #include <fmt/ostream.h>
++#include <fmt/os.h>
+ #include <seastar/core/timer.hh>
+ 
+ #include "common/pick_address.h"
+@@ -25,12 +26,14 @@
+ #include "messages/MOSDRepOpReply.h"
+ #include "messages/MOSDScrub2.h"
+ #include "messages/MPGStats.h"
++#include "msg/msg_fmt.h"
+ 
+ #include "os/Transaction.h"
+ #include "osd/ClassHandler.h"
+ #include "osd/OSDCap.h"
+ #include "osd/PGPeeringEvent.h"
+ #include "osd/PeeringState.h"
++#include "osd/osd_types_fmt.h"
+ 
+ #include "crimson/admin/osd_admin.h"
+ #include "crimson/admin/pg_commands.h"
+@@ -186,7 +189,7 @@ seastar::future<> OSD::mkfs(uuid_d osd_u
+   }).then([cluster_fsid, this] {
+     fmt::print("created object store {} for osd.{} fsid {}\n",
+                local_conf().get_val<std::string>("osd_data"),
+-               whoami, cluster_fsid);
++               whoami, fmt::streamed(cluster_fsid));
+     return seastar::now();
+   });
+ }
+@@ -200,7 +203,7 @@ seastar::future<> OSD::_write_superblock
+       return meta_coll->load_superblock().then([this](OSDSuperblock&& sb) {
+         if (sb.cluster_fsid != superblock.cluster_fsid) {
+           logger().error("provided cluster fsid {} != superblock's {}",
+-                         sb.cluster_fsid, superblock.cluster_fsid);
++                         fmt::streamed(sb.cluster_fsid), fmt::streamed(superblock.cluster_fsid));
+           throw std::invalid_argument("mismatched fsid");
+         }
+         if (sb.whoami != superblock.whoami) {
+@@ -214,8 +217,8 @@ seastar::future<> OSD::_write_superblock
+       logger().info(
+         "{} writing superblock cluster_fsid {} osd_fsid {}",
+         "_write_superblock",
+-        superblock.cluster_fsid,
+-        superblock.osd_fsid);
++        fmt::streamed(superblock.cluster_fsid),
++        fmt::streamed(superblock.osd_fsid));
+       return store.create_new_collection(coll_t::meta()).then([this] (auto ch) {
+         meta_coll = make_unique<OSDMeta>(ch, store);
+         ceph::os::Transaction t;
+@@ -495,13 +498,13 @@ seastar::future<> OSD::_add_me_to_crush(
+   };
+   return get_weight().then([this](auto weight) {
+     const crimson::crush::CrushLocation loc{make_unique<CephContext>().get()};
+-    logger().info("{} crush location is {}", __func__, loc);
++    logger().info("{} crush location is {}", __func__, fmt::streamed(loc));
+     string cmd = fmt::format(R"({{
+       "prefix": "osd crush create-or-move",
+       "id": {},
+       "weight": {:.4f},
+       "args": [{}]
+-    }})", whoami, weight, loc);
++    }})", whoami, weight, fmt::streamed(loc));
+     return monc->run_command(std::move(cmd), {});
+   }).then([](auto&& command_result) {
+     [[maybe_unused]] auto [code, message, out] = std::move(command_result);
+@@ -797,7 +800,7 @@ void OSD::handle_authentication(const En
+ {
+   // TODO: store the parsed cap and associate it with the connection
+   if (caps_info.allow_all) {
+-    logger().debug("{} {} has all caps", __func__, name);
++    logger().debug("{} {} has all caps", __func__, fmt::streamed(name));
+     return;
+   }
+   if (caps_info.caps.length() > 0) {
+@@ -806,14 +809,14 @@ void OSD::handle_authentication(const En
+     try {
+       decode(str, p);
+     } catch (ceph::buffer::error& e) {
+-      logger().warn("{} {} failed to decode caps string", __func__, name);
++      logger().warn("{} {} failed to decode caps string", __func__, fmt::streamed(name));
+       return;
+     }
+     OSDCap caps;
+     if (caps.parse(str)) {
+-      logger().debug("{} {} has caps {}", __func__, name, str);
++      logger().debug("{} {} has caps {}", __func__, fmt::streamed(name), str);
+     } else {
+-      logger().warn("{} {} failed to parse caps {}", __func__, name, str);
++      logger().warn("{} {} failed to parse caps {}", __func__, fmt::streamed(name), str);
+     }
+   }
+ }
+@@ -1051,7 +1054,7 @@ seastar::future<Ref<PG>> OSD::handle_pg_
+ seastar::future<> OSD::handle_osd_map(crimson::net::ConnectionRef conn,
+                                       Ref<MOSDMap> m)
+ {
+-  logger().info("handle_osd_map {}", *m);
++  logger().info("handle_osd_map {}", fmt::streamed(*m));
+   if (m->fsid != superblock.cluster_fsid) {
+     logger().warn("fsid mismatched");
+     return seastar::now();
+@@ -1141,7 +1144,7 @@ seastar::future<> OSD::committed_osd_map
+     if (osdmap->is_up(whoami)) {
+       const auto up_from = osdmap->get_up_from(whoami);
+       logger().info("osd.{}: map e {} marked me up: up_from {}, bind_epoch {}, state {}",
+-                    whoami, osdmap->get_epoch(), up_from, bind_epoch, state);
++                    whoami, osdmap->get_epoch(), up_from, bind_epoch, fmt::streamed(state));
+       if (bind_epoch < up_from &&
+           osdmap->get_addrs(whoami) == public_msgr->get_myaddrs() &&
+           state.is_booting()) {
+@@ -1184,7 +1187,7 @@ seastar::future<> OSD::committed_osd_map
+         return start_boot();
+       }
+     } else {
+-      logger().info("osd.{}: now {}", whoami, state);
++      logger().info("osd.{}: now {}", whoami, fmt::streamed(state));
+       // XXX
+       return seastar::now();
+     }
+@@ -1246,7 +1249,7 @@ seastar::future<> OSD::handle_rep_op_rep
+     m->finish_decode();
+     pg->second->handle_rep_op_reply(conn, *m);
+   } else {
+-    logger().warn("stale reply: {}", *m);
++    logger().warn("stale reply: {}", fmt::streamed(*m));
+   }
+   return seastar::now();
+ }
+--- ceph-17.2.3/src/crimson/osd/osd_meta.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_meta.cc	2022-09-11 22:06:32.387184583 +0200
+@@ -6,6 +6,7 @@
+ #include <fmt/format.h>
+ #include <fmt/ostream.h>
+ 
++#include "common/hobject_fmt.h"
+ #include "crimson/os/futurized_collection.h"
+ #include "crimson/os/futurized_store.h"
+ #include "os/Transaction.h"
+--- ceph-17.2.3/src/crimson/osd/pg.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/pg.cc	2022-09-12 06:26:38.859890170 +0200
+@@ -11,15 +11,19 @@
+ #include <boost/range/algorithm/copy.hpp>
+ #include <boost/range/algorithm/max_element.hpp>
+ #include <boost/range/numeric.hpp>
++#include <fmt/chrono.h>
+ #include <fmt/format.h>
++#include <fmt/os.h>
+ #include <fmt/ostream.h>
+ 
++#include "common/hobject_fmt.h"
+ #include "messages/MOSDOp.h"
+ #include "messages/MOSDOpReply.h"
+ #include "messages/MOSDRepOp.h"
+ #include "messages/MOSDRepOpReply.h"
+ 
+ #include "osd/OSDMap.h"
++#include "osd/osd_types_fmt.h"
+ 
+ #include "os/Transaction.h"
+ 
+@@ -768,7 +772,7 @@ PG::do_osd_ops(
+       reply->add_flags(CEPH_OSD_FLAG_ACK | CEPH_OSD_FLAG_ONDISK);
+       logger().debug(
+         "do_osd_ops: {} - object {} sending reply",
+-        *m,
++        fmt::streamed(*m),
+         m->get_hobj());
+       return do_osd_ops_iertr::make_ready_future<MURef<MOSDOpReply>>(
+         std::move(reply));
+@@ -1181,7 +1185,7 @@ seastar::future<> PG::stop()
+ }
+ 
+ void PG::on_change(ceph::os::Transaction &t) {
+-  logger().debug("{}, {}", __func__, *this);
++  logger().debug("{}, {}", __func__, fmt::streamed(*this));
+   for (auto& obc : obc_set_accessing) {
+     obc.interrupt(::crimson::common::actingset_changed(is_primary()));
+   }
+--- ceph-17.2.3/src/crimson/osd/pg_backend.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/pg_backend.cc	2022-09-12 19:43:42.529108520 +0200
+@@ -16,6 +16,7 @@
+ #include "os/Transaction.h"
+ #include "common/Checksummer.h"
+ #include "common/Clock.h"
++#include "common/hobject_fmt.h"
+ 
+ #include "crimson/common/exception.h"
+ #include "crimson/os/futurized_collection.h"
+--- ceph-17.2.3/src/crimson/osd/pg_interval_interrupt_condition.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/pg_interval_interrupt_condition.cc	2022-09-14 16:25:56.740431797 +0200
+@@ -20,14 +20,14 @@ bool IOInterruptCondition::new_interval_
+   bool ret = e < pg->get_interval_start_epoch();
+   if (ret)
+     ::crimson::get_logger(ceph_subsys_osd).debug(
+-      "{} new interval, should interrupt, e{}", *pg, e);
++      "{} new interval, should interrupt, e{}", fmt::streamed(*pg), e);
+   return ret;
+ }
+ 
+ bool IOInterruptCondition::is_stopping() {
+   if (pg->stopping)
+     ::crimson::get_logger(ceph_subsys_osd).debug(
+-      "{} shutting down, should interrupt", *pg);
++      "{} shutting down, should interrupt", fmt::streamed(*pg));
+   return pg->stopping;
+ }
+ 
+--- ceph-17.2.3/src/crimson/osd/pg_map.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/pg_map.cc	2022-09-14 16:26:00.380623198 +0200
+@@ -5,6 +5,7 @@
+ 
+ #include "crimson/osd/pg.h"
+ #include "common/Formatter.h"
++#include "osd/osd_types_fmt.h"
+ 
+ namespace {
+   seastar::logger& logger() {
+--- ceph-17.2.3/src/crimson/osd/pg_recovery.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/pg_recovery.cc	2022-09-13 18:51:33.867800178 +0200
+@@ -13,6 +13,7 @@
+ #include "crimson/osd/pg_recovery.h"
+ 
+ #include "osd/osd_types.h"
++#include "osd/osd_types_fmt.h"
+ #include "osd/PeeringState.h"
+ 
+ namespace {
+@@ -109,8 +110,8 @@ size_t PGRecovery::start_primary_recover
+ 
+   logger().info("{} recovering {} in pg {}, missing {}", __func__,
+                 pg->get_recovery_backend()->total_recovering(),
+-                *static_cast<crimson::osd::PG*>(pg),
+-                missing);
++                fmt::streamed(*static_cast<crimson::osd::PG*>(pg)),
++                fmt::streamed(missing));
+ 
+   unsigned started = 0;
+   int skipped = 0;
+@@ -187,7 +188,7 @@ size_t PGRecovery::start_replica_recover
+     logger().debug("{}: peer osd.{} missing {} objects", __func__,
+                  peer, pm.num_missing());
+     logger().trace("{}: peer osd.{} missing {}", __func__,
+-                 peer, pm.get_items());
++                 peer, fmt::streamed(pm.get_items()));
+ 
+     // recover oldest first
+     for (auto p = pm.get_rmissing().begin();
+--- ceph-17.2.3/src/crimson/osd/recovery_backend.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/recovery_backend.cc	2022-09-13 21:22:46.876223766 +0200
+@@ -10,6 +10,7 @@
+ 
+ #include "messages/MOSDFastDispatchOp.h"
+ #include "osd/osd_types.h"
++#include "osd/osd_types_fmt.h"
+ 
+ namespace {
+   seastar::logger& logger() {
+@@ -126,7 +127,7 @@ RecoveryBackend::handle_backfill(
+ {
+   logger().debug("{}", __func__);
+   if (pg.old_peering_msg(m.map_epoch, m.query_epoch)) {
+-    logger().debug("{}: discarding {}", __func__, m);
++    logger().debug("{}: discarding {}", __func__, fmt::streamed(m));
+     return seastar::now();
+   }
+   switch (m.op) {
+@@ -147,10 +148,10 @@ RecoveryBackend::interruptible_future<>
+ RecoveryBackend::handle_backfill_remove(
+   MOSDPGBackfillRemove& m)
+ {
+-  logger().debug("{} m.ls={}", __func__, m.ls);
++  logger().debug("{} m.ls={}", __func__, fmt::streamed(m.ls));
+   assert(m.get_type() == MSG_OSD_PG_BACKFILL_REMOVE);
+   if (pg.can_discard_replica_op(m)) {
+-    logger().debug("{}: discarding {}", __func__, m);
++    logger().debug("{}: discarding {}", __func__, fmt::streamed(m));
+     return seastar::now();
+   }
+   ObjectStore::Transaction t;
+@@ -285,7 +286,7 @@ RecoveryBackend::handle_scan(
+ {
+   logger().debug("{}", __func__);
+   if (pg.old_peering_msg(m.map_epoch, m.query_epoch)) {
+-    logger().debug("{}: discarding {}", __func__, m);
++    logger().debug("{}: discarding {}", __func__, fmt::streamed(m));
+     return seastar::now();
+   }
+   switch (m.op) {
+--- ceph-17.2.3/src/crimson/osd/replicated_backend.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/replicated_backend.cc	2022-09-12 19:49:54.678938412 +0200
+@@ -10,6 +10,7 @@
+ #include "crimson/os/futurized_store.h"
+ #include "crimson/osd/shard_services.h"
+ #include "osd/PeeringState.h"
++#include "osd/osd_types_fmt.h"
+ 
+ namespace {
+   seastar::logger& logger() {
+@@ -121,7 +122,7 @@ void ReplicatedBackend::got_rep_op_reply
+ {
+   auto found = pending_trans.find(reply.get_tid());
+   if (found == pending_trans.end()) {
+-    logger().warn("{}: no matched pending rep op: {}", __func__, reply);
++    logger().warn("{}: no matched pending rep op: {}", __func__, fmt::streamed(reply));
+     return;
+   }
+   auto& peers = found->second;
+--- ceph-17.2.3/src/crimson/osd/replicated_recovery_backend.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/replicated_recovery_backend.cc	2022-09-14 16:26:03.774134962 +0200
+@@ -2,6 +2,7 @@
+ // vim: ts=8 sw=2 smarttab expandtab
+ 
+ #include <fmt/format.h>
++#include <fmt/os.h>
+ #include <fmt/ostream.h>
+ #include <seastar/core/future.hh>
+ #include <seastar/core/do_with.hh>
+@@ -10,6 +11,8 @@
+ #include "crimson/osd/pg_backend.h"
+ #include "replicated_recovery_backend.h"
+ 
++#include "common/hobject_fmt.h"
++#include "osd/osd_types_fmt.h"
+ #include "msg/Message.h"
+ 
+ namespace {
+@@ -18,6 +21,9 @@ namespace {
+   }
+ }
+ 
++template <>
++struct fmt::formatter<MOSDPGPush> : ostream_formatter {};
++
+ using std::less;
+ using std::map;
+ using std::string;
+@@ -170,7 +176,7 @@ RecoveryBackend::interruptible_future<>
+ ReplicatedRecoveryBackend::handle_recovery_delete(
+   Ref<MOSDPGRecoveryDelete> m)
+ {
+-  logger().debug("{}: {}", __func__, *m);
++  logger().debug("{}: {}", __func__, fmt::streamed(*m));
+ 
+   auto& p = m->objects.front(); //TODO: only one delete per message for now.
+   return local_recover_delete(p.first, p.second, pg.get_osdmap_epoch())
+@@ -465,7 +471,7 @@ ReplicatedRecoveryBackend::read_metadata
+     for (auto&& [key, val] : attrs) {
+       push_op->attrset.emplace(std::move(key), std::move(val));
+     }
+-    logger().debug("read_metadata_for_push_op: {}", push_op->attrset[OI_ATTR]);
++    logger().debug("read_metadata_for_push_op: {}", fmt::streamed(push_op->attrset[OI_ATTR]));
+     object_info_t oi;
+     oi.decode_no_oid(push_op->attrset[OI_ATTR]);
+     new_progress.first = false;
+@@ -593,9 +599,9 @@ ReplicatedRecoveryBackend::get_shards_to
+ RecoveryBackend::interruptible_future<>
+ ReplicatedRecoveryBackend::handle_pull(Ref<MOSDPGPull> m)
+ {
+-  logger().debug("{}: {}", __func__, *m);
++  logger().debug("{}: {}", __func__, fmt::streamed(*m));
+   if (pg.can_discard_replica_op(*m)) {
+-    logger().debug("{}: discarding {}", __func__, *m);
++    logger().debug("{}: discarding {}", __func__, fmt::streamed(*m));
+     return seastar::now();
+   }
+   return seastar::do_with(m->take_pulls(), [this, from=m->from](auto& pulls) {
+@@ -643,7 +649,7 @@ ReplicatedRecoveryBackend::_handle_pull_
+   ceph::os::Transaction* t)
+ {
+   logger().debug("handle_pull_response {} {} data.size() is {} data_included: {}",
+-      pop.recovery_info, pop.after_progress, pop.data.length(), pop.data_included);
++      fmt::streamed(pop.recovery_info), fmt::streamed(pop.after_progress), pop.data.length(), pop.data_included);
+ 
+   const hobject_t &hoid = pop.soid;
+   auto& recovery_waiter = recovering.at(hoid);
+@@ -674,7 +680,7 @@ ReplicatedRecoveryBackend::_handle_pull_
+     const bool first = pi.recovery_progress.first;
+     pi.recovery_progress = pop.after_progress;
+     logger().debug("new recovery_info {}, new progress {}",
+-		   pi.recovery_info, pi.recovery_progress);
++		   fmt::streamed(pi.recovery_info), fmt::streamed(pi.recovery_progress));
+     interval_set<uint64_t> data_zeros;
+     {
+       uint64_t offset = pop.before_progress.data_recovered_to;
+@@ -888,7 +894,7 @@ RecoveryBackend::interruptible_future<>
+ ReplicatedRecoveryBackend::handle_push_reply(
+   Ref<MOSDPGPushReply> m)
+ {
+-  logger().debug("{}: {}", __func__, *m);
++  logger().debug("{}: {}", __func__, fmt::streamed(*m));
+   auto from = m->from;
+   auto& push_reply = m->replies[0]; //TODO: only one reply per message
+ 
+--- ceph-17.2.3/src/crimson/osd/shard_services.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/shard_services.cc	2022-09-12 18:10:09.584797181 +0200
+@@ -8,6 +8,7 @@
+ #include "messages/MOSDPGTemp.h"
+ 
+ #include "osd/osd_perf_counters.h"
++#include "osd/osd_types_fmt.h"
+ #include "osd/PeeringState.h"
+ #include "crimson/common/config_proxy.h"
+ #include "crimson/mgr/client.h"
+@@ -191,7 +192,7 @@ seastar::future<> ShardServices::send_pg
+ {
+   if (pg_temp_wanted.empty())
+     return seastar::now();
+-  logger().debug("{}: {}", __func__, pg_temp_wanted);
++  logger().debug("{}: {}", __func__, fmt::streamed(pg_temp_wanted));
+   MURef<MOSDPGTemp> ms[2] = {nullptr, nullptr};
+   for (auto& [pgid, pg_temp] : pg_temp_wanted) {
+     auto& m = ms[pg_temp.forced];
+--- ceph-17.2.3/src/crimson/osd/watch.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/watch.cc	2022-09-14 16:25:52.640216209 +0200
+@@ -10,6 +10,7 @@
+ #include "crimson/osd/osd_operations/internal_client_request.h"
+ 
+ #include "messages/MWatchNotify.h"
++#include "osd/osd_types_fmt.h"
+ 
+ 
+ namespace {
+@@ -257,7 +258,7 @@ seastar::future<> Notify::send_completio
+ {
+   logger().info("{} -- {} in progress watchers, timedout watchers {}",
+                 __func__, watchers.size(), timedout_watchers.size());
+-  logger().debug("{} sending notify replies: {}", __func__, notify_replies);
++  logger().debug("{} sending notify replies: {}", __func__, fmt::streamed(notify_replies));
+ 
+   ceph::bufferlist empty;
+   auto reply = crimson::make_message<MWatchNotify>(
+--- ceph-17.2.3/src/crimson/osd/osd_operations/client_request.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/client_request.h	2022-09-12 21:54:55.796154929 +0200
+@@ -98,3 +98,6 @@ private:
+ };
+ 
+ }
++
++template <>
++struct fmt::formatter<crimson::osd::ClientRequest> : ostream_formatter {};
+--- ceph-17.2.3/src/crimson/osd/osd_operations/background_recovery.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/background_recovery.cc	2022-09-13 17:40:57.542629721 +0200
+@@ -49,7 +49,7 @@ void BackgroundRecovery::dump_detail(For
+ 
+ seastar::future<> BackgroundRecovery::start()
+ {
+-  logger().debug("{}: start", *this);
++  logger().debug("{}: start", fmt::streamed(*this));
+ 
+   IRef ref = this;
+   auto maybe_delay = seastar::now();
+@@ -67,7 +67,7 @@ seastar::future<> BackgroundRecovery::st
+         }, pg);
+       }).handle_exception_type([ref, this](const std::system_error& err) {
+         if (err.code() == std::make_error_code(std::errc::interrupted)) {
+-          logger().debug("{} recovery interruped: {}", *pg, err.what());
++          logger().debug("{} recovery interruped: {}", fmt::streamed(*pg), err.what());
+ 	  return seastar::now();
+         }
+         return seastar::make_exception_future<>(err);
+@@ -78,7 +78,7 @@ seastar::future<> BackgroundRecovery::st
+ UrgentRecovery::interruptible_future<bool>
+ UrgentRecovery::do_recovery()
+ {
+-  logger().debug("{}: {}", __func__, *this);
++  logger().debug("{}: {}", __func__, fmt::streamed(*this));
+   if (!pg->has_reset_since(epoch_started)) {
+     return with_blocking_future_interruptible<interruptor::condition>(
+       pg->get_recovery_handler()->recover_missing(soid, need)
+--- ceph-17.2.3/src/crimson/osd/osd_operations/client_request.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/client_request.cc	2022-09-12 22:14:51.672228672 +0200
+@@ -1,6 +1,7 @@
+ // -*- mode:C++; tab-width:8; c-basic-offset:2; indent-tabs-mode:nil -*-
+ // vim: ts=8 sw=2 smarttab expandtab
+ 
++#include <fmt/os.h>
+ #include <seastar/core/future.hh>
+ 
+ #include "messages/MOSDOp.h"
+--- ceph-17.2.3/src/crimson/osd/osd_operations/client_request_common.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/client_request_common.cc	2022-09-12 22:19:24.919860123 +0200
+@@ -1,6 +1,7 @@
+ // -*- mode:C++; tab-width:8; c-basic-offset:2; indent-tabs-mode:nil -*-
+ // vim: ts=8 sw=2 smarttab expandtab
+ 
++#include "common/hobject_fmt.h"
+ #include "crimson/osd/osd_operations/client_request_common.h"
+ #include "crimson/osd/pg.h"
+ 
+@@ -43,10 +44,10 @@ bool CommonClientRequest::should_abort_r
+       std::rethrow_exception(eptr);
+     } catch(::crimson::common::actingset_changed& e) {
+       if (e.is_primary()) {
+-        logger().debug("{} {} operation restart, acting set changed", __func__, op);
++        logger().debug("{} {} operation restart, acting set changed", __func__, fmt::streamed(op));
+         return false;
+       } else {
+-        logger().debug("{} {} operation abort, up primary changed", __func__, op);
++        logger().debug("{} {} operation abort, up primary changed", __func__, fmt::streamed(op));
+         return true;
+       }
+     }
+@@ -54,7 +55,7 @@ bool CommonClientRequest::should_abort_r
+     assert(*eptr.__cxa_exception_type() ==
+       typeid(crimson::common::system_shutdown_exception));
+     crimson::get_logger(ceph_subsys_osd).debug(
+-        "{} {} operation skipped, system shutdown", __func__, op);
++        "{} {} operation skipped, system shutdown", __func__, fmt::streamed(op));
+     return true;
+   }
+ }
+--- ceph-17.2.3/src/crimson/osd/osd_operations/compound_peering_request.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/compound_peering_request.cc	2022-09-13 16:37:59.084922640 +0200
+@@ -4,6 +4,7 @@
+ #include <seastar/core/future.hh>
+ 
+ #include "osd/PeeringState.h"
++#include "osd/osd_types_fmt.h"
+ 
+ #include "messages/MOSDPGCreate2.h"
+ 
+@@ -44,7 +45,7 @@ public:
+ 
+   PeeringEvent::interruptible_future<>
+   complete_rctx(Ref<crimson::osd::PG> pg) final {
+-    logger().debug("{}: submitting ctx transaction", *this);
++    logger().debug("{}: submitting ctx transaction", fmt::streamed(*this));
+     state->ctx.accept_buffered_messages(ctx);
+     state = {};
+     if (!pg) {
+@@ -73,14 +74,14 @@ std::vector<crimson::OperationRef> handl
+       "{}: {} e{} @{} "
+       "history {} pi {}",
+       __func__, pgid, created, created_stamp,
+-      history, pi);
++      history, fmt::streamed(pi));
+     if (!pi.empty() &&
+ 	m->epoch < pi.get_bounds().second) {
+       logger().error(
+         "got pg_create on {} epoch {}  "
+         "unmatched past_intervals {} (history {})",
+         pgid, m->epoch,
+-        pi, history);
++        fmt::streamed(pi), history);
+     } else {
+       auto op = osd.get_shard_services().start_operation<PeeringSubEvent>(
+ 	  state,
+@@ -141,7 +142,7 @@ void CompoundPeeringRequest::dump_detail
+ 
+ seastar::future<> CompoundPeeringRequest::start()
+ {
+-  logger().info("{}: starting", *this);
++  logger().info("{}: starting", fmt::streamed(*this));
+   auto state = seastar::make_lw_shared<compound_state>();
+   auto blocker = std::make_unique<SubOpBlocker>(
+     [&] {
+@@ -154,16 +155,16 @@ seastar::future<> CompoundPeeringRequest
+     }());
+ 
+   IRef ref = this;
+-  logger().info("{}: about to fork future", *this);
++  logger().info("{}: about to fork future", fmt::streamed(*this));
+   return crimson::common::handle_system_shutdown(
+     [this, ref, blocker=std::move(blocker), state]() mutable {
+     return with_blocking_future(
+       blocker->make_blocking_future(state->promise.get_future())
+     ).then([this, blocker=std::move(blocker)](auto &&ctx) {
+-      logger().info("{}: sub events complete", *this);
++      logger().info("{}: sub events complete", fmt::streamed(*this));
+       return osd.get_shard_services().dispatch_context_messages(std::move(ctx));
+     }).then([this, ref=std::move(ref)] {
+-      logger().info("{}: complete", *this);
++      logger().info("{}: complete", fmt::streamed(*this));
+     });
+   });
+ }
+--- ceph-17.2.3/src/crimson/osd/osd_operations/internal_client_request.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/internal_client_request.cc	2022-09-13 16:38:05.051901752 +0200
+@@ -21,7 +21,7 @@ InternalClientRequest::InternalClientReq
+ 
+ InternalClientRequest::~InternalClientRequest()
+ {
+-  logger().debug("{}: destroying", *this);
++  logger().debug("{}: destroying", fmt::streamed(*this));
+ }
+ 
+ void InternalClientRequest::print(std::ostream &) const
+@@ -41,7 +41,7 @@ seastar::future<> InternalClientRequest:
+ {
+   return crimson::common::handle_system_shutdown([this] {
+     return seastar::repeat([this] {
+-      logger().debug("{}: in repeat", *this);
++      logger().debug("{}: in repeat", fmt::streamed(*this));
+       return interruptor::with_interruption([this]() mutable {
+         return with_blocking_future_interruptible<interruptor::condition>(
+           handle.enter(pp().wait_for_active)
+@@ -57,7 +57,7 @@ seastar::future<> InternalClientRequest:
+             return with_blocking_future_interruptible<interruptor::condition>(
+               handle.enter(pp().get_obc)
+             ).then_interruptible([this] () -> PG::load_obc_iertr::future<> {
+-              logger().debug("{}: getting obc lock", *this);
++              logger().debug("{}: getting obc lock", fmt::streamed(*this));
+               return seastar::do_with(create_osd_ops(),
+                 [this](auto& osd_ops) mutable {
+                 logger().debug("InternalClientRequest: got {} OSDOps to execute",
+--- ceph-17.2.3/src/crimson/osd/osd_operations/peering_event.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/peering_event.cc	2022-09-13 16:38:13.575681414 +0200
+@@ -12,6 +12,12 @@
+ #include "crimson/osd/osd_operations/peering_event.h"
+ #include "crimson/osd/osd_connection_priv.h"
+ 
++template <>
++struct fmt::formatter<crimson::osd::PeeringEvent> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<crimson::osd::RemotePeeringEvent> : ostream_formatter {};
++
+ namespace {
+   seastar::logger& logger() {
+     return crimson::get_logger(ceph_subsys_osd);
+@@ -157,7 +163,7 @@ PeeringEvent::interruptible_future<> Rem
+   if (pg) {
+     return PeeringEvent::complete_rctx(pg);
+   } else {
+-    logger().debug("{}: OSDState is {}", *this, osd.state);
++    logger().debug("{}: OSDState is {}", *this, fmt::streamed(osd.state));
+     return osd.state.when_active().then([this] {
+       assert(osd.state.is_active());
+       return shard_services.dispatch_context_messages(std::move(ctx));
+@@ -167,7 +173,7 @@ PeeringEvent::interruptible_future<> Rem
+ 
+ seastar::future<> RemotePeeringEvent::complete_rctx_no_pg()
+ {
+-  logger().debug("{}: OSDState is {}", *this, osd.state);
++  logger().debug("{}: OSDState is {}", *this, fmt::streamed(osd.state));
+   return osd.state.when_active().then([this] {
+     assert(osd.state.is_active());
+     return shard_services.dispatch_context_messages(std::move(ctx));
+--- ceph-17.2.3/src/crimson/osd/osd_operations/pg_advance_map.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/pg_advance_map.cc	2022-09-13 17:27:42.507671946 +0200
+@@ -53,7 +53,7 @@ seastar::future<> PGAdvanceMap::start()
+ {
+   using cached_map_t = boost::local_shared_ptr<const OSDMap>;
+ 
+-  logger().debug("{}: start", *this);
++  logger().debug("{}: start", fmt::streamed(*this));
+ 
+   IRef ref = this;
+   return with_blocking_future(
+@@ -77,7 +77,7 @@ seastar::future<> PGAdvanceMap::start()
+ 	  if (do_init) {
+ 	    osd.pg_map.pg_created(pg->get_pgid(), pg);
+ 	    osd.shard_services.inc_pg_num();
+-	    logger().info("PGAdvanceMap::start new pg {}", *pg);
++	    logger().info("PGAdvanceMap::start new pg {}", fmt::streamed(*pg));
+ 	  }
+ 	  return seastar::when_all_succeed(
+ 	    pg->get_need_up_thru() \
+@@ -90,7 +90,7 @@ seastar::future<> PGAdvanceMap::start()
+           return osd.shard_services.send_pg_temp();
+         });
+     }).then([this, ref=std::move(ref)] {
+-      logger().debug("{}: complete", *this);
++      logger().debug("{}: complete", fmt::streamed(*this));
+     });
+ }
+ 
+--- ceph-17.2.3/src/crimson/osd/osd_operations/recovery_subrequest.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/recovery_subrequest.cc	2022-09-13 17:58:35.838043438 +0200
+@@ -12,7 +12,7 @@ namespace {
+ namespace crimson::osd {
+ 
+ seastar::future<> RecoverySubRequest::start() {
+-  logger().debug("{}: start", *this);
++  logger().debug("{}: start", fmt::streamed(*this));
+ 
+   IRef opref = this;
+   return with_blocking_future(
+--- ceph-17.2.3/src/crimson/osd/osd_operations/replicated_request.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/osd/osd_operations/replicated_request.cc	2022-09-13 17:30:37.646841371 +0200
+@@ -58,7 +58,7 @@ RepRequest::PGPipeline &RepRequest::pp(P
+ 
+ seastar::future<> RepRequest::start()
+ {
+-  logger().debug("{} start", *this);
++  logger().debug("{} start", fmt::streamed(*this));
+   IRef ref = this;
+ 
+   return with_blocking_future(handle.enter(cp().await_map))
+--- ceph-17.2.3/src/crimson/tools/store_nbd/tm_driver.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/crimson/tools/store_nbd/tm_driver.cc	2022-09-14 16:25:47.783294166 +0200
+@@ -62,7 +62,7 @@ TMDriver::read_extents_ret TMDriver::rea
+ 	t, offset, length
+       ).si_then([this, &t, &pins, &ret](auto _pins) {
+ 	_pins.swap(pins);
+-	logger().debug("read_extents: mappings {}", pins);
++	logger().debug("read_extents: mappings {}", fmt::streamed(pins));
+ 	return trans_intr::do_for_each(
+ 	  pins.begin(),
+ 	  pins.end(),
+@@ -78,7 +78,7 @@ TMDriver::read_extents_ret TMDriver::rea
+ 	      ret.push_back(std::make_pair(ref->get_laddr(), ref));
+ 	      logger().debug(
+ 		"read_extents: got extent {}",
+-		*ref);
++		fmt::streamed(*ref));
+ 	      return seastar::now();
+ 	    });
+ 	  }).si_then([&ret] {
 --- ceph-17.2.3/src/mon/LogMonitor.cc.orig	2022-07-28 23:52:12.000000000 +0200
 +++ ceph-17.2.3/src/mon/LogMonitor.cc	2022-09-04 17:59:19.765987645 +0200
 @@ -415,7 +415,7 @@ void LogMonitor::log_external(const LogE
@@ -82,68 +1612,167 @@
        int err = safe_write(fd, file_log_buffer.data(), file_log_buffer.size());
        file_log_buffer.clear();
        if (err < 0) {
---- ceph-17.2.3/src/seastar/src/core/on_internal_error.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/core/on_internal_error.cc	2022-09-04 19:01:07.218073017 +0200
-@@ -35,7 +35,7 @@ bool seastar::set_abort_on_internal_erro
- 
- void seastar::on_internal_error(logger& logger, std::string_view msg) {
-     if (abort_on_internal_error.load()) {
--        logger.error("{}, at: {}", msg, current_backtrace());
-+        logger.error("{}, at: {}", msg, fmt::streamed(current_backtrace()));
-         abort();
-     } else {
-         throw_with_backtrace<std::runtime_error>(std::string(msg));
-@@ -44,7 +44,7 @@ void seastar::on_internal_error(logger&
- 
- void seastar::on_internal_error(logger& logger, std::exception_ptr ex) {
-     if (abort_on_internal_error.load()) {
--        logger.error("{}", ex);
-+        logger.error("{}", fmt::streamed(ex));
-         abort();
-     } else {
-         std::rethrow_exception(std::move(ex));
-@@ -52,7 +52,7 @@ void seastar::on_internal_error(logger&
+--- ceph-17.2.3/src/msg/Message.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/msg/Message.h	2022-09-09 06:30:47.541433908 +0200
+@@ -559,4 +559,12 @@ MURef<T> make_message(Args&&... args) {
+   return {new T(std::forward<Args>(args)...), TOPNSPC::common::UniquePtrDeleter{}};
+ }
+ }
++
++#ifdef WITH_SEASTAR
++#  include <fmt/ostream.h>
++
++template <>
++struct fmt::formatter<Message> : ostream_formatter {};
++#endif // WITH_SEASTAR
++
+ #endif
+--- ceph-17.2.3/src/msg/msg_fmt.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/msg/msg_fmt.h	2022-09-07 16:56:49.030752970 +0200
+@@ -24,3 +24,15 @@ struct fmt::formatter<entity_name_t> {
+     return fmt::format_to(ctx.out(), "{}.{}", addr.type_str(), addr.num());
+   }
+ };
++
++template <>
++struct fmt::formatter<sockaddr_storage> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<sockaddr *> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<entity_addr_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<entity_addrvec_t> : ostream_formatter {};
+--- ceph-17.2.3/src/osd/osd_types_fmt.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/osd/osd_types_fmt.h	2022-09-14 16:25:21.495245277 +0200
+@@ -104,3 +104,21 @@ struct fmt::formatter<object_info_t> {
+     return fmt::format_to(ctx.out(), ")");
+   }
+ };
++
++template <>
++struct fmt::formatter<coll_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<pg_history_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<pg_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<spg_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<watch_info_t> : ostream_formatter {};
++
++template <typename T>
++struct fmt::formatter<interval_set<T>> : ostream_formatter {};
+--- ceph-17.2.3/src/seastar/include/seastar/core/print.hh.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/include/seastar/core/print.hh	2022-09-09 18:12:17.899077047 +0200
+@@ -155,3 +155,6 @@ fmt_print(std::ostream& os, const char*
  }
  
- void seastar::on_internal_error_noexcept(logger& logger, std::string_view msg) noexcept {
--    logger.error("{}, at: {}", msg, current_backtrace());
-+    logger.error("{}, at: {}", msg, fmt::streamed(current_backtrace()));
-     if (abort_on_internal_error.load()) {
-         abort();
-     }
---- ceph-17.2.3/src/seastar/include/seastar/util/backtrace.hh.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/include/seastar/util/backtrace.hh	2022-09-04 19:27:16.336970410 +0200
-@@ -184,7 +184,7 @@ public:
-     template<typename... Args>
-     backtraced(Args&&... args)
-             : Exc(std::forward<Args>(args)...)
--            , _backtrace(std::make_shared<sstring>(format("{} Backtrace: {}", Exc::what(), current_backtrace()))) {}
-+            , _backtrace(std::make_shared<sstring>(format("{} Backtrace: {}", Exc::what(), fmt::streamed(current_backtrace())))) {}
+ }
++
++template <typename Clock, typename Dur>
++struct fmt::formatter<std::chrono::time_point<Clock, Dur>> : ostream_formatter {};
+--- ceph-17.2.3/src/seastar/include/seastar/core/shared_ptr.hh.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/include/seastar/core/shared_ptr.hh	2022-09-08 18:29:43.378965666 +0200
+@@ -26,6 +26,7 @@
+ #include <type_traits>
+ #include <functional>
+ #include <ostream>
++#include <fmt/ostream.h>
+ #include <seastar/util/is_smart_ptr.hh>
+ #include <seastar/util/indirect.hh>
  
-     /**
-      * Returns the original exception message with a backtrace appended to it
---- ceph-17.2.3/src/seastar/src/core/prometheus.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/core/prometheus.cc	2022-09-04 19:32:16.272626166 +0200
-@@ -532,7 +532,7 @@ future<> write_text_representation(outpu
-                     } catch (...) {
-                         auto ex = std::current_exception();
-                         // print this error as it's ignored later on by `connection::start_response`
--                        seastar_logger.error("prometheus: write_text_representation: {}: {}", s.str(), ex);
-+                        seastar_logger.error("prometheus: write_text_representation: {}: {}", s.str(), fmt::streamed(ex));
-                         std::rethrow_exception(std::move(ex));
-                     }
-                     s << value_str;
+@@ -839,6 +840,9 @@ using shared_ptr_value_hash = indirect_h
+ 
+ }
+ 
++template <typename T>
++struct fmt::formatter<seastar::shared_ptr<T>> : ostream_formatter {};
++
+ namespace std {
+ 
+ template <typename T>
+--- ceph-17.2.3/src/seastar/include/seastar/net/inet_address.hh.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/include/seastar/net/inet_address.hh	2022-09-08 06:29:04.805312816 +0200
+@@ -26,6 +26,7 @@
+ #include <netinet/in.h>
+ #include <stdexcept>
+ #include <vector>
++#include <fmt/ostream.h>
+ 
+ #include <seastar/core/future.hh>
+ #include <seastar/core/sstring.hh>
+@@ -126,3 +127,6 @@ struct hash<seastar::net::inet_address>
+     size_t operator()(const seastar::net::inet_address&) const;
+ };
+ }
++
++template <>
++struct fmt::formatter<seastar::net::inet_address> : ostream_formatter {};
+--- ceph-17.2.3/src/seastar/include/seastar/net/socket_defs.hh.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/include/seastar/net/socket_defs.hh	2022-09-08 06:35:44.041541450 +0200
+@@ -28,6 +28,7 @@
+ #include <seastar/net/byteorder.hh>
+ #include <seastar/net/unix_address.hh>
+ #include <cassert>
++#include <fmt/ostream.h>
+ 
+ namespace seastar {
+ 
+@@ -184,3 +185,6 @@ struct hash<seastar::transport> {
+ };
+ 
+ }
++
++template <>
++struct fmt::formatter<seastar::socket_address> : ostream_formatter {};
+--- ceph-17.2.3/src/seastar/include/seastar/util/backtrace.hh.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/include/seastar/util/backtrace.hh	2022-09-07 17:09:17.119598672 +0200
+@@ -162,6 +162,9 @@ struct hash<seastar::tasktrace> {
+ 
+ }
+ 
++template <>
++struct fmt::formatter<seastar::tasktrace> : ostream_formatter {};
++
+ namespace seastar {
+ 
+ using saved_backtrace = tasktrace;
+--- ceph-17.2.3/src/seastar/include/seastar/util/log.hh.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/include/seastar/util/log.hh	2022-09-07 17:16:57.860168355 +0200
+@@ -524,4 +524,13 @@ std::ostream& operator<<(std::ostream&,
+ std::ostream& operator<<(std::ostream&, const std::system_error&);
+ }
+ 
++template <>
++struct fmt::formatter<std::exception_ptr> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<std::exception> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<std::system_error> : ostream_formatter {};
++
+ /// @}
+--- ceph-17.2.3/src/seastar/src/core/io_queue.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/core/io_queue.cc	2022-09-04 19:41:17.627629354 +0200
+@@ -207,7 +207,7 @@ public:
+         , _fq_entry(_ioq.request_fq_ticket(dnl))
+         , _desc(std::make_unique<io_desc_read_write>(_ioq, pc, _stream, _fq_entry.ticket()))
+     {
+-        io_log.trace("dev {} : req {} queue  len {} ticket {}", _ioq.dev_id(), fmt::ptr(&*_desc), _dnl.length(), _fq_entry.ticket());
++        io_log.trace("dev {} : req {} queue  len {} ticket {}", _ioq.dev_id(), fmt::ptr(&*_desc), _dnl.length(), fmt::streamed(_fq_entry.ticket()));
+     }
+ 
+     queued_io_request(queued_io_request&&) = delete;
 --- ceph-17.2.3/src/seastar/src/core/memory.cc.orig	2021-12-19 23:02:10.000000000 +0100
 +++ ceph-17.2.3/src/seastar/src/core/memory.cc	2022-09-04 19:34:50.387337178 +0200
-@@ -754,7 +754,7 @@ cpu_pages::allocate_large_and_trim(unsig
- void
- cpu_pages::warn_large_allocation(size_t size) {
-     alloc_stats::increment_local(alloc_stats::types::large_allocs);
--    seastar_memory_logger.warn("oversized allocation: {} bytes. This is non-fatal, but could lead to latency and/or fragmentation issues. Please report: at {}", size, current_backtrace());
-+    seastar_memory_logger.warn("oversized allocation: {} bytes. This is non-fatal, but could lead to latency and/or fragmentation issues. Please report: at {}", size, fmt::streamed(current_backtrace()));
-     large_allocation_warning_threshold *= 1.618; // prevent spam
- }
- 
 @@ -1616,6 +1616,15 @@ std::ostream& operator<<(std::ostream& o
      return os;
  }
@@ -160,64 +1789,8 @@
  static human_readable_value to_human_readable_value(uint64_t value, uint64_t step, uint64_t precision, const std::array<char, 5>& suffixes) {
      if (!value) {
          return {0, suffixes[0]};
-@@ -1748,7 +1757,7 @@ void maybe_dump_memory_diagnostics(size_
-     }
- 
-     disable_report_on_alloc_failure_temporarily guard;
--    seastar_memory_logger.debug("Failed to allocate {} bytes at {}", size, current_backtrace());
-+    seastar_memory_logger.debug("Failed to allocate {} bytes at {}", size, fmt::streamed(current_backtrace()));
- 
-     static thread_local logger::rate_limit rate_limit(std::chrono::seconds(10));
- 
---- ceph-17.2.3/src/seastar/src/core/io_queue.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/core/io_queue.cc	2022-09-04 19:41:17.627629354 +0200
-@@ -207,7 +207,7 @@ public:
-         , _fq_entry(_ioq.request_fq_ticket(dnl))
-         , _desc(std::make_unique<io_desc_read_write>(_ioq, pc, _stream, _fq_entry.ticket()))
-     {
--        io_log.trace("dev {} : req {} queue  len {} ticket {}", _ioq.dev_id(), fmt::ptr(&*_desc), _dnl.length(), _fq_entry.ticket());
-+        io_log.trace("dev {} : req {} queue  len {} ticket {}", _ioq.dev_id(), fmt::ptr(&*_desc), _dnl.length(), fmt::streamed(_fq_entry.ticket()));
-     }
- 
-     queued_io_request(queued_io_request&&) = delete;
 --- ceph-17.2.3/src/seastar/src/core/reactor.cc.orig	2021-12-19 23:02:10.000000000 +0100
 +++ ceph-17.2.3/src/seastar/src/core/reactor.cc	2022-09-04 19:39:35.978957648 +0200
-@@ -821,7 +821,7 @@ static decltype(auto) install_signal_han
-             throw_system_error_on(r == -1);
-         } catch (...) {
-             mem.release(); // We failed to restore previous stack, must leak it.
--            seastar_logger.error("Failed to restore signal stack: {}", std::current_exception());
-+            seastar_logger.error("Failed to restore signal stack: {}", fmt::streamed(std::current_exception()));
-         }
-     });
- }
-@@ -1313,7 +1313,7 @@ internal::make_cpu_stall_detector(cpu_st
-     try {
-         return cpu_stall_detector_linux_perf_event::try_make(cfg);
-     } catch (...) {
--        seastar_logger.warn("Creation of perf_event based stall detector failed, falling back to posix timer: {}", std::current_exception());
-+        seastar_logger.warn("Creation of perf_event based stall detector failed, falling back to posix timer: {}", fmt::streamed(std::current_exception()));
-         return std::make_unique<cpu_stall_detector_posix_timer>(cfg);
-     }
- }
-@@ -1389,7 +1389,7 @@ void reactor::complete_timers(T& timers,
-                 *internal::current_scheduling_group_ptr() = t->_sg;
-                 t->_callback();
-             } catch (...) {
--                seastar_logger.error("Timer callback failed: {}", std::current_exception());
-+                seastar_logger.error("Timer callback failed: {}", fmt::streamed(std::current_exception()));
-             }
-         }
-     }
-@@ -1511,7 +1511,7 @@ reactor::posix_listen(socket_address sa,
-         fd.bind(sa.u.sa, sa.length());
-         fd.listen(opts.listen_backlog);
-     } catch (const std::system_error& s) {
--        throw std::system_error(s.code(), fmt::format("posix_listen failed for address {}", sa));
-+        throw std::system_error(s.code(), fmt::format("posix_listen failed for address {}", fmt::streamed(sa)));
-     }
- 
-     return pollable_fd(std::move(fd));
 @@ -3487,7 +3487,7 @@ reactor_options::reactor_options(program
                   " The diagnostics will be written to the seastar_memory logger, with error level."
                   " Note that if the seastar_memory logger is set to debug or trace level, the diagnostics will be logged irrespective of this setting.")
@@ -227,53 +1800,54 @@
      , aio_fsync(*this, "aio-fsync", kernel_supports_aio_fsync(),
                  "Use Linux aio for fsync() calls. This reduces latency; requires Linux 4.18 or later.")
      , max_networking_io_control_blocks(*this, "max-networking-io-control-blocks", 10000,
-@@ -4207,7 +4207,7 @@ bool smp::pure_poll_queues() {
- __thread reactor* local_engine;
+--- ceph-17.2.3/src/seastar/src/net/dns.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/net/dns.cc	2022-09-04 20:36:25.288504129 +0200
+@@ -238,7 +238,7 @@ public:
+             sstring name;
+         };
  
- void report_exception(std::string_view message, std::exception_ptr eptr) noexcept {
--    seastar_logger.error("{}: {}", message, eptr);
-+    seastar_logger.error("{}: {}", message, fmt::streamed(eptr));
- }
+-        dns_log.debug("Query name {} ({})", name, family);
++        dns_log.debug("Query name {} ({})", name, fmt::streamed(family));
  
- future<> check_direct_io_support(std::string_view path) noexcept {
---- ceph-17.2.3/src/seastar/src/http/httpd.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/http/httpd.cc	2022-09-04 20:20:30.365222925 +0200
-@@ -310,12 +310,12 @@ future<> connection::process() {
-         try {
-             std::get<0>(joined).get();
-         } catch (...) {
--            hlogger.debug("Read exception encountered: {}", std::current_exception());
-+            hlogger.debug("Read exception encountered: {}", fmt::streamed(std::current_exception()));
+         if (!family) {
+             auto res = inet_address::parse_numerical(name);
+--- ceph-17.2.3/src/seastar/src/rpc/rpc.cc.orig	2021-12-19 23:02:10.000000000 +0100
++++ ceph-17.2.3/src/seastar/src/rpc/rpc.cc	2022-09-04 20:49:25.379426601 +0200
+@@ -790,7 +790,7 @@ namespace rpc {
+                   f = smp::submit_to(_parent_id.shard(), [this, c = make_foreign(static_pointer_cast<rpc::connection>(shared_from_this()))] () mutable {
+                       auto sit = _servers.find(*_server._options.streaming_domain);
+                       if (sit == _servers.end()) {
+-                          throw std::logic_error(format("Shard {:d} does not have server with streaming domain {:x}", this_shard_id(), *_server._options.streaming_domain).c_str());
++                          throw std::logic_error(format("Shard {:d} does not have server with streaming domain {}", this_shard_id(), fmt::streamed(*_server._options.streaming_domain)).c_str());
+                       }
+                       auto s = sit->second;
+                       auto it = s->_conns.find(_parent_id);
+@@ -1010,7 +1010,7 @@ future<> server::connection::send_unknow
+   {
+       if (_options.streaming_domain) {
+           if (_servers.find(*_options.streaming_domain) != _servers.end()) {
+-              throw std::runtime_error(format("An RPC server with the streaming domain {} is already exist", *_options.streaming_domain));
++              throw std::runtime_error(format("An RPC server with the streaming domain {} is already exist", fmt::streamed(*_options.streaming_domain)));
+           }
+           _servers[*_options.streaming_domain] = this;
+       }
+--- ceph-17.2.3/src/test/crimson/seastore/onode_tree/test_value.h.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/test/crimson/seastore/onode_tree/test_value.h	2022-09-11 08:56:20.792343731 +0200
+@@ -138,12 +138,12 @@ class TestValue final : public Value {
          }
-         try {
-             std::get<1>(joined).get();
-         } catch (...) {
--            hlogger.debug("Response exception encountered: {}", std::current_exception());
-+            hlogger.debug("Response exception encountered: {}", fmt::streamed(std::current_exception()));
+         default:
+           logger().error("OTree::TestValue::Replay: got unknown op {} when replay {:#x}+{:#x}",
+-                         op, value_addr, payload_mut.get_length());
++                         static_cast<uint8_t>(op), value_addr, payload_mut.get_length());
+           ceph_abort();
          }
-         return make_ready_future<>();
-     });
-@@ -519,17 +519,17 @@ future<> http_server::do_accept_one(int
-         auto conn = std::make_unique<connection>(*this, std::move(ar.connection), std::move(ar.remote_address));
-         (void)try_with_gate(_task_gate, [conn = std::move(conn)]() mutable {
-             return conn->process().handle_exception([conn = std::move(conn)] (std::exception_ptr ex) {
--                hlogger.error("request error: {}", ex);
-+                hlogger.error("request error: {}", fmt::streamed(ex));
-             });
-         }).handle_exception_type([] (const gate_closed_exception& e) {});
-     }).handle_exception_type([] (const std::system_error &e) {
-         // We expect a ECONNABORTED when http_server::stop is called,
-         // no point in warning about that.
-         if (e.code().value() != ECONNABORTED) {
--            hlogger.error("accept failed: {}", e);
-+            hlogger.error("accept failed: {}", fmt::streamed(e));
-         }
-     }).handle_exception([] (std::exception_ptr ex) {
--        hlogger.error("accept failed: {}", ex);
-+        hlogger.error("accept failed: {}", fmt::streamed(ex));
-     });
- }
- 
+       } catch (buffer::error& e) {
+         logger().error("OTree::TestValue::Replay: got decode error {} when replay {:#x}+{:#x}",
+-                       e, value_addr, payload_mut.get_length());
++                       fmt::streamed(e), value_addr, payload_mut.get_length());
+         ceph_abort();
+       }
+     }
 --- ceph-17.2.3/src/tools/neorados.cc.orig	2022-08-30 09:00:26.418417475 +0200
 +++ ceph-17.2.3/src/tools/neorados.cc	2022-09-04 20:23:19.850824080 +0200
 @@ -55,7 +55,7 @@ void printseq(const V& v, std::ostream&
@@ -294,397 +1868,13 @@
        fmt::print("Commands:\n");
        for (const auto& cmd : commands) {
  	fmt::print("    {} {}{}{}\n",
---- ceph-17.2.3/src/seastar/src/net/dns.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/net/dns.cc	2022-09-04 20:36:25.288504129 +0200
-@@ -238,7 +238,7 @@ public:
-             sstring name;
-         };
+--- ceph-17.2.3/src/tools/crimson/perf_crimson_msgr.cc.orig	2022-07-28 23:52:12.000000000 +0200
++++ ceph-17.2.3/src/tools/crimson/perf_crimson_msgr.cc	2022-09-09 19:53:09.761115666 +0200
+@@ -14,6 +14,7 @@
+ #include <seastar/core/smp.hh>
  
--        dns_log.debug("Query name {} ({})", name, family);
-+        dns_log.debug("Query name {} ({})", name, fmt::streamed(family));
+ #include "common/ceph_time.h"
++#include "msg/msg_fmt.h"
+ #include "messages/MOSDOp.h"
  
-         if (!family) {
-             auto res = inet_address::parse_numerical(name);
-@@ -291,7 +291,7 @@ public:
-             inet_address addr;
-         };
- 
--        dns_log.debug("Query addr {}", addr);
-+        dns_log.debug("Query addr {}", fmt::streamed(addr));
- 
-         auto p = new promise_wrap(std::move(addr));
-         auto f = p->get_future();
-@@ -501,7 +501,7 @@ private:
-             ++p;
-         }
- 
--        dns_log.debug("Query success: {}/{}", e.names.front(), e.addr_list.front());
-+        dns_log.debug("Query success: {}/{}", e.names.front(), fmt::streamed(e.addr_list.front()));
- 
-         return e;
-     }
-@@ -599,7 +599,7 @@ private:
-             auto& e = get_socket_entry(fd);
-             auto sa = sock_addr(addr, len);
- 
--            dns_log.trace("Connect {}({})->{}", fd, int(e.typ), sa);
-+            dns_log.trace("Connect {}({})->{}", fd, int(e.typ), fmt::streamed(sa));
- 
-             assert(e.avail == 0);
- 
-@@ -618,7 +618,7 @@ private:
-                             e.tcp.socket = f.get0();
-                             dns_log.trace("Connection complete: {}", fd);
-                         } catch (...) {
--                            dns_log.debug("Connect {} failed: {}", fd, std::current_exception());
-+                            dns_log.debug("Connect {} failed: {}", fd, fmt::streamed(std::current_exception()));
-                         }
-                         e.avail = POLLOUT|POLLIN;
-                         me->poll_sockets();
-@@ -682,7 +682,7 @@ private:
-                                 dns_log.trace("Read {} -> {} bytes", fd, buf.size());
-                                 e.tcp.indata = std::move(buf);
-                             } catch (...) {
--                                dns_log.debug("Read {} failed: {}", fd, std::current_exception());
-+                                dns_log.debug("Read {} failed: {}", fd, fmt::streamed(std::current_exception()));
-                             }
-                             e.avail |= POLLIN; // always reset state
-                             me->poll_sockets();
-@@ -708,7 +708,7 @@ private:
-                     if (udp.in) {
-                         auto & p = udp.in->get_data();
- 
--                        dns_log.trace("Read {}. {} bytes available from {}", fd, p.len(), udp.in->get_src());
-+                        dns_log.trace("Read {}. {} bytes available from {}", fd, p.len(), fmt::streamed(udp.in->get_src()));
- 
-                         if (from != nullptr) {
-                             *from = socket_address(udp.in->get_src()).as_posix_sockaddr();
-@@ -746,7 +746,7 @@ private:
-                                 e.udp.in = std::move(d);
-                                 e.avail |= POLLIN;
-                             } catch (...) {
--                                dns_log.debug("Read {} failed: {}", fd, std::current_exception());
-+                                dns_log.debug("Read {} failed: {}", fd, fmt::streamed(std::current_exception()));
-                             }
-                             me->poll_sockets();
-                             me->release(fd);
-@@ -840,7 +840,7 @@ private:
-                             f.get();
-                             dns_log.trace("Send {}. {} bytes sent.", fd, bytes);
-                         } catch (...) {
--                            dns_log.debug("Send {} failed: {}", fd, std::current_exception());
-+                            dns_log.debug("Send {} failed: {}", fd, fmt::streamed(std::current_exception()));
-                         }
-                         e.avail |= POLLOUT;
-                         me->poll_sockets();
---- ceph-17.2.3/src/seastar/src/util/alloc_failure_injector.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/util/alloc_failure_injector.cc	2022-09-04 20:37:46.729440078 +0200
-@@ -35,7 +35,7 @@ void alloc_failure_injector::fail() {
-     _failed = true;
-     cancel();
-     if (log.is_enabled(log_level::trace)) {
--        log.trace("Failing at {}", current_backtrace());
-+        log.trace("Failing at {}", fmt::streamed(current_backtrace()));
-     }
-     _on_alloc_failure();
- }
---- ceph-17.2.3/src/seastar/src/rpc/rpc.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/rpc/rpc.cc	2022-09-04 20:49:25.379426601 +0200
-@@ -10,11 +10,11 @@ namespace seastar {
- namespace rpc {
- 
-     void logger::operator()(const client_info& info, id_type msg_id, const sstring& str) const {
--        log(format("client {} msg_id {}:  {}", info.addr, msg_id, str));
-+        log(format("client {} msg_id {}:  {}", fmt::streamed(info.addr), msg_id, str));
-     }
- 
-     void logger::operator()(const client_info& info, id_type msg_id, log_level level, std::string_view str) const {
--        log(level, "client {} msg_id {}:  {}", info.addr, msg_id, str);
-+        log(level, "client {} msg_id {}:  {}", fmt::streamed(info.addr), msg_id, str);
-     }
- 
-     void logger::operator()(const client_info& info, const sstring& str) const {
-@@ -26,11 +26,11 @@ namespace rpc {
-     }
- 
-     void logger::operator()(const socket_address& addr, const sstring& str) const {
--        log(format("client {}: {}", addr, str));
-+        log(format("client {}: {}", fmt::streamed(addr), str));
-     }
- 
-     void logger::operator()(const socket_address& addr, log_level level, std::string_view str) const {
--        log(level, "client {}: {}", addr, str);
-+        log(level, "client {}: {}", fmt::streamed(addr), str);
-     }
- 
-   no_wait_type no_wait;
-@@ -790,7 +790,7 @@ namespace rpc {
-                   f = smp::submit_to(_parent_id.shard(), [this, c = make_foreign(static_pointer_cast<rpc::connection>(shared_from_this()))] () mutable {
-                       auto sit = _servers.find(*_server._options.streaming_domain);
-                       if (sit == _servers.end()) {
--                          throw std::logic_error(format("Shard {:d} does not have server with streaming domain {:x}", this_shard_id(), *_server._options.streaming_domain).c_str());
-+                          throw std::logic_error(format("Shard {:d} does not have server with streaming domain {}", this_shard_id(), fmt::streamed(*_server._options.streaming_domain)).c_str());
-                       }
-                       auto s = sit->second;
-                       auto it = s->_conns.find(_parent_id);
-@@ -1010,7 +1010,7 @@ future<> server::connection::send_unknow
-   {
-       if (_options.streaming_domain) {
-           if (_servers.find(*_options.streaming_domain) != _servers.end()) {
--              throw std::runtime_error(format("An RPC server with the streaming domain {} is already exist", *_options.streaming_domain));
-+              throw std::runtime_error(format("An RPC server with the streaming domain {} is already exist", fmt::streamed(*_options.streaming_domain)));
-           }
-           _servers[*_options.streaming_domain] = this;
-       }
---- ceph-17.2.3/src/seastar/src/util/log.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/util/log.cc	2022-09-04 20:50:15.945414934 +0200
-@@ -312,7 +312,7 @@ void logger::failed_to_log(std::exceptio
-             if (!fmt.format.empty()) {
-                 it = fmt::format_to(it, ": fmt='{}'", fmt.format);
-             }
--            return fmt::format_to(it, ": {}", ex);
-+            return fmt::format_to(it, ": {}", fmt::streamed(ex));
-         });
-         do_log(log_level::error, writer);
-     } catch (...) {
-@@ -577,7 +577,7 @@ std::ostream& operator<<(std::ostream& o
-         try {
-             throw;
-         } catch (const seastar::nested_exception& ne) {
--            out << fmt::format(": {} (while cleaning up after {})", ne.inner, ne.outer);
-+            out << fmt::format(": {} (while cleaning up after {})", fmt::streamed(ne.inner), fmt::streamed(ne.outer));
-         } catch (const std::system_error& e) {
-             out << " (error " << e.code() << ", " << e.what() << ")";
-         } catch (const std::exception& e) {
---- ceph-17.2.3/src/seastar/src/websocket/server.cc.orig	2021-12-19 23:02:10.000000000 +0100
-+++ ceph-17.2.3/src/seastar/src/websocket/server.cc	2022-09-04 20:50:55.620831451 +0200
-@@ -69,17 +69,17 @@ future<> server::do_accept_one(int which
-         auto conn = std::make_unique<connection>(*this, std::move(ar.connection));
-         (void)try_with_gate(_task_gate, [conn = std::move(conn)]() mutable {
-             return conn->process().handle_exception([conn = std::move(conn)] (std::exception_ptr ex) {
--                wlogger.error("request error: {}", ex);
-+                wlogger.error("request error: {}", fmt::streamed(ex));
-             });
-         }).handle_exception_type([] (const gate_closed_exception& e) {});
-     }).handle_exception_type([] (const std::system_error &e) {
-         // We expect a ECONNABORTED when server::stop is called,
-         // no point in warning about that.
-         if (e.code().value() != ECONNABORTED) {
--            wlogger.error("accept failed: {}", e);
-+            wlogger.error("accept failed: {}", fmt::streamed(e));
-         }
-     }).handle_exception([] (std::exception_ptr ex) {
--        wlogger.error("accept failed: {}", ex);
-+        wlogger.error("accept failed: {}", fmt::streamed(ex));
-     });
- }
- 
-@@ -108,12 +108,12 @@ future<> connection::process() {
-         try {
-             std::get<0>(joined).get();
-         } catch (...) {
--            wlogger.debug("Read exception encountered: {}", std::current_exception());
-+            wlogger.debug("Read exception encountered: {}", fmt::streamed(std::current_exception()));
-         }
-         try {
-             std::get<1>(joined).get();
-         } catch (...) {
--            wlogger.debug("Response exception encountered: {}", std::current_exception());
-+            wlogger.debug("Response exception encountered: {}", fmt::streamed(std::current_exception()));
-         }
-         return make_ready_future<>();
-     });
-@@ -183,7 +183,7 @@ future<> connection::read_loop() {
-         });
-     }).then_wrapped([this] (future<> f) {
-         if (f.failed()) {
--            wlogger.error("Read failed: {}", f.get_exception());
-+            wlogger.error("Read failed: {}", fmt::streamed(f.get_exception()));
-         }
-         return _replies.push_eventually({});
-     }).finally([this] {
---- ceph-17.2.3/src/mon/MonMap.cc.orig	2022-07-28 23:52:12.000000000 +0200
-+++ ceph-17.2.3/src/mon/MonMap.cc	2022-09-04 21:16:11.447309592 +0200
-@@ -796,12 +796,12 @@ seastar::future<> MonMap::init_with_dns_
-                             false);
-       }).handle_exception_type([t=record.target](const std::system_error& e) {
-         logger().debug("{}: unable to resolve name for {}: {}",
--                       "init_with_dns_srv", t, e);
-+                       "init_with_dns_srv", t, fmt::streamed(e));
-       });
-     });
-   }).handle_exception_type([name](const std::system_error& e) {
-     logger().debug("{}: unable to get monitor info from DNS SRV with {}: {}",
--                 "init_with_dns_srv", name, e);
-+                 "init_with_dns_srv", name, fmt::streamed(e));
-     // ignore DNS failures
-     return seastar::make_ready_future<>();
-   });
---- ceph-17.2.3/src/crimson/common/assert.cc.orig	2022-07-28 23:52:12.000000000 +0200
-+++ ceph-17.2.3/src/crimson/common/assert.cc	2022-09-04 21:27:06.935556194 +0200
-@@ -22,7 +22,7 @@ namespace ceph {
-     logger.error("{}:{} : In function '{}', ceph_assert(%s)\n"
-                  "{}",
-                  file, line, func, assertion,
--                 seastar::current_backtrace());
-+                 fmt::streamed(seastar::current_backtrace()));
-     std::cout << std::flush;
-     abort();
-   }
-@@ -42,7 +42,7 @@ namespace ceph {
-                  "{}\n{}\n",
-                  file, line, func, assertion,
-                  buf,
--                 seastar::current_backtrace());
-+                 fmt::streamed(seastar::current_backtrace()));
-     std::cout << std::flush;
-     abort();
-   }
-@@ -54,7 +54,7 @@ namespace ceph {
-     logger.error("{}:{} : In function '{}', abort(%s)\n"
-                  "{}",
-                  file, line, func, msg,
--                 seastar::current_backtrace());
-+                 fmt::streamed(seastar::current_backtrace()));
-     std::cout << std::flush;
-     abort();
-   }
-@@ -74,7 +74,7 @@ namespace ceph {
-                  "{}\n{}\n",
-                  file, line, func,
-                  buf,
--                 seastar::current_backtrace());
-+                 fmt::streamed(seastar::current_backtrace()));
-     std::cout << std::flush;
-     abort();
-   }
---- ceph-17.2.3/src/crimson/admin/admin_socket.cc.orig	2022-07-28 23:52:12.000000000 +0200
-+++ ceph-17.2.3/src/crimson/admin/admin_socket.cc	2022-09-04 21:25:31.307155684 +0200
-@@ -77,7 +77,7 @@ auto AdminSocket::parse_cmd(const std::v
-       return tell_result_t{-EINVAL, "invalid json", std::move(out)};
-     }
-   } catch (const std::runtime_error& e) {
--    logger().error("{}: incoming command syntax: {}", __func__, cmd);
-+    logger().error("{}: incoming command syntax: {}", __func__, fmt::streamed(cmd));
-     out.append(string{e.what()});
-     return tell_result_t{-EINVAL, "invalid json", std::move(out)};
-   }
-@@ -88,7 +88,7 @@ auto AdminSocket::parse_cmd(const std::v
-     cmd_getval(cmdmap, "format", format);
-     cmd_getval(cmdmap, "prefix", prefix);
-   } catch (const bad_cmd_get& e) {
--    logger().error("{}: invalid syntax: {}", __func__, cmd);
-+    logger().error("{}: invalid syntax: {}", __func__, fmt::streamed(cmd));
-     out.append(string{e.what()});
-     return tell_result_t{-EINVAL, "invalid json", std::move(out)};
-   }
-@@ -155,7 +155,7 @@ auto AdminSocket::execute_command(const
-     string desc{parsed->hook.desc};
-     if (!validate_cmd(nullptr, desc, parsed->params, os)) {
-       logger().error("AdminSocket::execute_command: "
--                     "failed to validate '{}': {}", cmd, os.str());
-+                     "failed to validate '{}': {}", fmt::streamed(cmd), os.str());
-       ceph::bufferlist out;
-       out.append(os);
-       return seastar::make_ready_future<tell_result_t>(
-@@ -208,7 +208,7 @@ seastar::future<> AdminSocket::handle_cl
-   }).then([&in] {
-     return in.close();
-   }).handle_exception([](auto ep) {
--    logger().debug("exception on {}: {}", __func__, ep);
-+    logger().debug("exception on {}: {}", __func__, fmt::streamed(ep));
-   });
- }
- 
-@@ -245,7 +245,7 @@ seastar::future<> AdminSocket::start(con
-         });
-       }).handle_exception([this](auto ep) {
-         if (!stop_gate.is_closed()) {
--          logger().error("AdminSocket: terminated: {}", ep);
-+          logger().error("AdminSocket: terminated: {}", fmt::streamed(ep));
-         }
-       });
-     });
---- ceph-17.2.3/src/crimson/admin/osd_admin.cc.orig	2022-09-04 21:48:44.290691903 +0200
-+++ ceph-17.2.3/src/crimson/admin/osd_admin.cc	2022-09-04 21:48:48.797593322 +0200
-@@ -299,7 +299,7 @@ static ghobject_t test_ops_get_object_na
-       // the return type of `fmt::format` is `std::string`
-       using namespace fmt::literals;
-       throw std::invalid_argument{
--        "Invalid pool '{}'"_format(*pool_arg)
-+	fmt::format("Invalid pool '{}'", *pool_arg)
-       };
-     }
-     return pool;
-@@ -367,7 +367,7 @@ public:
- 	                                               e.what());
-     }
-     return shard_services.get_store().inject_data_error(obj).then([=] {
--      logger().info("successfully injected data error for obj={}", obj);
-+      logger().info("successfully injected data error for obj={}", fmt::streamed(obj));
-       ceph::bufferlist bl;
-       bl.append("ok"sv);
-       return seastar::make_ready_future<tell_result_t>(0,
-@@ -409,7 +409,7 @@ public:
- 	                                               e.what());
-     }
-     return shard_services.get_store().inject_mdata_error(obj).then([=] {
--      logger().info("successfully injected metadata error for obj={}", obj);
-+      logger().info("successfully injected metadata error for obj={}", fmt::streamed(obj));
-       ceph::bufferlist bl;
-       bl.append("ok"sv);
-       return seastar::make_ready_future<tell_result_t>(0,
---- ceph-17.2.3/src/crimson/admin/pg_commands.cc.orig	2022-07-28 23:52:12.000000000 +0200
-+++ ceph-17.2.3/src/crimson/admin/pg_commands.cc	2022-09-04 21:34:44.833110723 +0200
-@@ -59,11 +59,11 @@ public:
-     Ref<PG> pg = osd.get_pg(spg_id);
-     if (!pg) {
-       return seastar::make_ready_future<tell_result_t>(tell_result_t{
--        -ENOENT, fmt::format("i don't have pgid '{}'", spg_id)});
-+        -ENOENT, fmt::format("i don't have pgid '{}'", fmt::streamed(spg_id))});
-     }
-     if (!pg->is_primary()) {
-       return seastar::make_ready_future<tell_result_t>(tell_result_t{
--        -EAGAIN, fmt::format("not primary for pgid '{}'", spg_id)});
-+        -EAGAIN, fmt::format("not primary for pgid '{}'", fmt::streamed(spg_id))});
-     }
-     return this->do_command(pg, cmdmap, format, std::move(input));
-   }
---- ceph-17.2.3/src/crimson/common/logclient.cc.orig	2022-07-28 23:52:12.000000000 +0200
-+++ ceph-17.2.3/src/crimson/common/logclient.cc	2022-09-04 22:22:38.523982693 +0200
-@@ -139,7 +139,7 @@ void LogChannel::update_config(map<strin
- {
-   logger().debug(
-     "{} log_to_monitors {} log_to_syslog {} log_channels {} log_prios {}",
--    __func__, log_to_monitors, log_to_syslog, log_channels, log_prios);
-+    __func__, fmt::streamed(log_to_monitors), fmt::streamed(log_to_syslog), fmt::streamed(log_channels), fmt::streamed(log_prios));
-   bool to_monitors = (get_str_map_key(log_to_monitors, log_channel,
-                                       &CLOG_CONFIG_DEFAULT_KEY) == "true");
-   bool to_syslog = (get_str_map_key(log_to_syslog, log_channel,
-@@ -286,7 +286,7 @@ MessageURef LogClient::_get_mon_log_mess
-     ceph_assert(log_iter != log_queue.end());
-     out_log_queue.push_back(*log_iter);
-     last_log_sent = log_iter->seq;
--    logger().debug(" will send {}", *log_iter);
-+    logger().debug(" will send {}", fmt::streamed(*log_iter));
-     ++log_iter;
-   }
-   
-@@ -332,7 +332,7 @@ const EntityName& LogClient::get_myname(
- 
- seastar::future<> LogClient::handle_log_ack(Ref<MLogAck> m)
- {
--  logger().debug("handle_log_ack {}", *m);
-+  logger().debug("handle_log_ack {}", fmt::streamed(*m));
- 
-   version_t last = m->last;
- 
-@@ -341,7 +341,7 @@ seastar::future<> LogClient::handle_log_
-     const LogEntry &entry(*q);
-     if (entry.seq > last)
-       break;
--    logger().debug(" logged {}", entry);
-+    logger().debug(" logged {}", fmt::streamed(entry));
-     q = log_queue.erase(q);
-   }
-   return seastar::now();
+ #include "crimson/auth/DummyAuth.h"
