@@ -71,6 +71,8 @@ Patch11:	%{name}-liburing.patch
 Patch12:	%{name}-glibc.patch
 Patch13:	%{name}-libfmt.patch
 Patch14:	%{name}-system-rocksdb.patch
+# https://src.fedoraproject.org/rpms/ceph/blob/rawhide/f/0017-gcc-12-omnibus.patch
+Patch15:	%{name}-gcc12.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -341,6 +343,7 @@ uruchamiania demonów.
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
