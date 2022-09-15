@@ -536,6 +536,10 @@ fi
 %attr(755,root,root) %{_bindir}/cephfs-mirror
 %attr(755,root,root) %{_bindir}/cephfs-table-tool
 %attr(755,root,root) %{_bindir}/cephfs-top
+%if %{with seastore}
+%attr(755,root,root) %{_bindir}/crimson-osd
+%attr(755,root,root) %{_bindir}/crimson-store-nbd
+%endif
 %attr(755,root,root) %{_bindir}/crushdiff
 %attr(755,root,root) %{_bindir}/crushtool
 %attr(755,root,root) %{_bindir}/librados-config
