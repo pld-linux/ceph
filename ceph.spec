@@ -1,7 +1,6 @@
 # TODO:
-# - QATZIP? (WITH_QATZIP=ON, BR: QATzip-devel)
+# - system arrow, parquet (WITH_SYSTEM_ARROW=ON, arrow>=4, parquet>=4)?
 # - brotli? (WITH_BROTLI=ON, uses internal brotli as downloaded subproject)
-# - seastar (WITH_SEASTAR=ON, BR: c-ares-devel >= 1.13.0)
 # - proper init scripts if non-systemd boot is to be supported
 #   (upstream scripts seem overcomplicated and hardly useful)
 # - run as non-root user
@@ -73,11 +72,13 @@ Patch13:	%{name}-libfmt.patch
 Patch14:	%{name}-system-rocksdb.patch
 # https://src.fedoraproject.org/rpms/ceph/blob/rawhide/f/0017-gcc-12-omnibus.patch
 Patch15:	%{name}-gcc12.patch
+# https://src.fedoraproject.org/rpms/ceph/blob/rawhide/f/0020-src-arrow-cpp-cmake_modules-ThirdpartyToolchain.cmake.patch
+Patch16:	%{name}-system-xsimd.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
-BuildRequires:	boost-devel >= 1.72
-BuildRequires:	boost-python3-devel >= 1.72
+BuildRequires:	boost-devel >= 1.73
+BuildRequires:	boost-python3-devel >= 1.73
 %{?with_seastar:BuildRequires:	c-ares-devel >= 1.13.0}
 BuildRequires:	cmake >= 3.22.2
 %{?with_seastar:BuildRequires:	cryptopp-devel >= 5.6.5}
@@ -121,6 +122,7 @@ BuildRequires:	libstdc++-devel >= 6:7
 %{?with_tcmalloc:BuildRequires:	libtcmalloc-devel >= 2.6.2}
 BuildRequires:	libtool >= 2:1.5
 BuildRequires:	liburing-devel
+BuildRequires:	libutf8proc-devel >= 2.2.0
 BuildRequires:	libuuid-devel
 BuildRequires:	libxml2-devel >= 2.0
 %{?with_zbd:BuildRequires:	libzbd-devel}
@@ -157,6 +159,7 @@ BuildRequires:	thrift-devel
 BuildRequires:	udev-devel
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
 BuildRequires:	xfsprogs-devel
+BuildRequires:	xsimd-devel
 %{?with_seastar:BuildRequires:	yaml-cpp-devel >= 0.5.1}
 %ifarch %{x8664}
 BuildRequires:	yasm
@@ -206,7 +209,7 @@ Summary(pl.UTF-8):	Pliki nagłówkowe bibliotek Cepha
 License:	LGPL v2.1
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
-Requires:	boost-devel >= 1.72
+Requires:	boost-devel >= 1.73
 Requires:	curl-devel
 Requires:	expat-devel >= 1.95
 Requires:	fcgi-devel
@@ -344,6 +347,7 @@ uruchamiania demonów.
 %patch13 -p1
 %patch14 -p1
 %patch15 -p1
+%patch16 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
