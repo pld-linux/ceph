@@ -74,6 +74,7 @@ Patch14:	%{name}-system-rocksdb.patch
 Patch15:	%{name}-gcc12.patch
 # https://src.fedoraproject.org/rpms/ceph/blob/rawhide/f/0020-src-arrow-cpp-cmake_modules-ThirdpartyToolchain.cmake.patch
 Patch16:	%{name}-system-xsimd.patch
+Patch17:	boost1.81.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -348,6 +349,7 @@ uruchamiania demonów.
 %patch14 -p1
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
