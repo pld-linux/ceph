@@ -70,15 +70,6 @@
  #include "crimson/admin/admin_socket.h"
  #include "crimson/common/log.h"
  #include "crimson/osd/exceptions.h"
-@@ -299,7 +300,7 @@ static ghobject_t test_ops_get_object_na
-       // the return type of `fmt::format` is `std::string`
-       using namespace fmt::literals;
-       throw std::invalid_argument{
--        "Invalid pool '{}'"_format(*pool_arg)
-+	fmt::format("Invalid pool '{}'", *pool_arg)
-       };
-     }
-     return pool;
 --- ceph-17.2.3/src/crimson/admin/pg_commands.cc.orig	2022-07-28 23:52:12.000000000 +0200
 +++ ceph-17.2.3/src/crimson/admin/pg_commands.cc	2022-09-14 20:59:47.803920736 +0200
 @@ -13,6 +13,7 @@
@@ -1601,13 +1592,13 @@
  	      return seastar::now();
  	    });
  	  }).si_then([&ret] {
---- ceph-17.2.3/src/mon/LogMonitor.cc.orig	2022-07-28 23:52:12.000000000 +0200
-+++ ceph-17.2.3/src/mon/LogMonitor.cc	2022-09-04 17:59:19.765987645 +0200
+--- ceph-17.2.5/src/mon/LogMonitor.cc.orig	2023-03-22 06:45:27.743273749 +0100
++++ ceph-17.2.5/src/mon/LogMonitor.cc	2023-03-22 06:25:06.412142157 +0100
 @@ -415,7 +415,7 @@ void LogMonitor::log_external(const LogE
      }
  
      if (fd >= 0) {
--      fmt::format_to(file_log_buffer, "{}\n", le);
+-      fmt::format_to(std::back_inserter(file_log_buffer), "{}\n", le);
 +      fmt::format_to(std::back_inserter(file_log_buffer), "{}\n", fmt::streamed(le));
        int err = safe_write(fd, file_log_buffer.data(), file_log_buffer.size());
        file_log_buffer.clear();
@@ -1645,10 +1636,10 @@
 +
 +template <>
 +struct fmt::formatter<entity_addrvec_t> : ostream_formatter {};
---- ceph-17.2.3/src/osd/osd_types_fmt.h.orig	2022-07-28 23:52:12.000000000 +0200
-+++ ceph-17.2.3/src/osd/osd_types_fmt.h	2022-09-14 16:25:21.495245277 +0200
-@@ -104,3 +104,21 @@ struct fmt::formatter<object_info_t> {
-     return fmt::format_to(ctx.out(), ")");
+--- ceph-17.2.5/src/osd/osd_types_fmt.h.orig	2023-03-22 06:45:27.893272937 +0100
++++ ceph-17.2.5/src/osd/osd_types_fmt.h	2023-03-22 06:26:17.049743254 +0100
+@@ -115,3 +115,18 @@ struct fmt::formatter<pg_t> {
+     return fmt::format_to(ctx.out(), "{}.{:x}", pg.pool(), pg.m_seed);
    }
  };
 +
@@ -1657,9 +1648,6 @@
 +
 +template <>
 +struct fmt::formatter<pg_history_t> : ostream_formatter {};
-+
-+template <>
-+struct fmt::formatter<pg_t> : ostream_formatter {};
 +
 +template <>
 +struct fmt::formatter<spg_t> : ostream_formatter {};

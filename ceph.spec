@@ -47,12 +47,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	17.2.3
-Release:	4
+Version:	17.2.5
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	96f10fa942ec0db4008993cddaec88ec
+# Source0-md5:	e331cea04680ea8ff982a58c516d7611
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-python.patch
@@ -527,6 +527,7 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-dencoder
 %attr(755,root,root) %{_bindir}/ceph-diff-sorted
 %attr(755,root,root) %{_bindir}/ceph-erasure-code-tool
+%attr(755,root,root) %{_bindir}/ceph-exporter
 %attr(755,root,root) %{_bindir}/ceph-immutable-object-cache
 %attr(755,root,root) %{_bindir}/ceph-kvstore-tool
 %attr(755,root,root) %{_bindir}/ceph-mds
