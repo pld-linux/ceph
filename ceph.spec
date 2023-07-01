@@ -43,6 +43,8 @@
 %ifnarch %{x8664} aarch64 mips64 ppc64 sparc64 s390x
 %undefine	with_seastar
 %endif
+
+%{?with_java:%{?use_default_jdk}}
 #
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
@@ -100,8 +102,8 @@ BuildRequires:	gperf
 %{?with_kerberos:BuildRequires:	heimdal-devel}
 %{?with_seastar:BuildRequires:	hwloc-devel >= 1.11.2}
 %if %{with java}
-BuildRequires:	jdk
-BuildRequires:	jre-X11
+%{?use_jdk:%buildrequires_jdk}%{!?use_jdk:BuildRequires:  jdk}
+BuildRequires:	%{?use_jdk:%{use_jdk}-jre-base-X11}%{!?use_jdk:jre-X11}
 %endif
 BuildRequires:	keyutils-devel
 BuildRequires:	leveldb-devel >= 1.23-2
@@ -149,7 +151,7 @@ BuildRequires:	python3-devel >= 1:3.2
 BuildRequires:	rabbitmq-c-devel
 %{?with_seastar:BuildRequires:	ragel >= 6.10}
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.14}
-BuildRequires:	rpmbuild(macros) >= 1.671
+BuildRequires:	rpmbuild(macros) >= 2.021
 %{?with_qat:BuildRequires:	qatlib-devel}
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
