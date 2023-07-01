@@ -147,6 +147,7 @@ BuildRequires:	python3 >= 1:3.2
 BuildRequires:	python3-Cython
 BuildRequires:	python3-PyYAML
 BuildRequires:	python3-devel >= 1:3.2
+BuildRequires:	python3-modules >= 1:3.2
 %{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
 BuildRequires:	rabbitmq-c-devel
 %{?with_seastar:BuildRequires:	ragel >= 6.10}
