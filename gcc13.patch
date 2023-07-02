@@ -1,0 +1,120 @@
+From 796ce63667b460ba9b8d40891f30e45981ba237a Mon Sep 17 00:00:00 2001
+From: Tim Serong <tserong@suse.com>
+Date: Wed, 8 Mar 2023 13:53:29 +1100
+Subject: [PATCH 1/2] common, librbd, msg, test: fix FTBFS on gcc 13
+
+This is based on 0024-gcc-13.patch from https://tracker.ceph.com/issues/58477
+but with an extra #include <cstdint> to avoid dropping std:: prefixes on
+integer types.
+
+Fixes: https://tracker.ceph.com/issues/58477
+Signed-off-by: Tim Serong <tserong@suse.com>
+---
+ src/common/Cycles.h                | 2 ++
+ src/librbd/api/PoolMetadata.h      | 1 +
+ src/msg/async/compression_onwire.h | 1 +
+ src/test/librados/op_speed.cc      | 2 ++
+ src/test/mon/test_log_rss_usage.cc | 1 +
+ 5 files changed, 7 insertions(+)
+
+diff --git a/src/common/Cycles.h b/src/common/Cycles.h
+index 16e0aa67fc144..b546479c2b351 100644
+--- a/src/common/Cycles.h
++++ b/src/common/Cycles.h
+@@ -32,6 +32,8 @@
+ #ifndef CEPH_CYCLES_H
+ #define CEPH_CYCLES_H
+ 
++#include <cstdint>
++
+ /**
+  * This class provides static methods that read the fine-grain CPU
+  * cycle counter and translate between cycle-level times and absolute
+diff --git a/src/librbd/api/PoolMetadata.h b/src/librbd/api/PoolMetadata.h
+index c0a8173596e5c..69ab574ac7545 100644
+--- a/src/librbd/api/PoolMetadata.h
++++ b/src/librbd/api/PoolMetadata.h
+@@ -7,6 +7,7 @@
+ #include "include/buffer_fwd.h"
+ #include "include/rados/librados_fwd.hpp"
+ 
++#include <cstdint>
+ #include <map>
+ #include <string>
+ 
+diff --git a/src/msg/async/compression_onwire.h b/src/msg/async/compression_onwire.h
+index dcd6d26c4ca30..d3b35a4655c1b 100644
+--- a/src/msg/async/compression_onwire.h
++++ b/src/msg/async/compression_onwire.h
+@@ -4,6 +4,7 @@
+ #ifndef CEPH_COMPRESSION_ONWIRE_H
+ #define CEPH_COMPRESSION_ONWIRE_H
+ 
++#include <cstdint>
+ #include <optional>
+ 
+ #include "compressor/Compressor.h"
+diff --git a/src/test/librados/op_speed.cc b/src/test/librados/op_speed.cc
+index 90c7bdac571b8..849a6566f2d10 100644
+--- a/src/test/librados/op_speed.cc
++++ b/src/test/librados/op_speed.cc
+@@ -1,6 +1,8 @@
+ // -*- mode:C++; tab-width:8; c-basic-offset:2; indent-tabs-mode:t -*
+ // vim: ts=8 sw=2 smarttab
+ 
++#include <cstdint>
++
+ #include "include/rados/librados.hpp"
+ 
+ constexpr int to_create = 10'000'000;
+diff --git a/src/test/mon/test_log_rss_usage.cc b/src/test/mon/test_log_rss_usage.cc
+index f6e85f414c8e7..b8ca3012ab7c1 100644
+--- a/src/test/mon/test_log_rss_usage.cc
++++ b/src/test/mon/test_log_rss_usage.cc
+@@ -1,4 +1,5 @@
+ #include <sys/types.h>
++#include <cstdint>
+ #include <dirent.h>
+ #include <errno.h>
+ #include <vector>
+
+From 74794f9d6f5c6671438085bdba730b504901a7c0 Mon Sep 17 00:00:00 2001
+From: Sam James <sam@gentoo.org>
+Date: Fri, 28 Oct 2022 16:47:38 +0100
+Subject: [PATCH] common: fix build with GCC 13 (missing <cstdint> include)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Needed for uint8_t. Only worked by chance before (see
+https://www.gnu.org/software/gcc/gcc-13/porting_to.html).
+
+```
+FAILED: src/CMakeFiles/common-objs.dir/mds/FSMapUser.cc.o
+/usr/bin/x86_64-pc-linux-gnu-g++ -DBOOST_ASIO_DISABLE_THREAD_KEYWORD_EXTENSION -DHAVE_CONFIG_H -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE -D_REENTRANT -D_THREAD_SAFE -D__CEPH__ -D__STDC_FORMAT_MACROS -D__linux__ -I/var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5_build/src/include -I/var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src -isystem /var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5_build/include -isystem /var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src/xxHash -isystem /var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src/rapidjson/include  -O2 -march=native -pipe -fPIC   -U_FORTIFY_SOURCE -Wall -fno-strict-aliasing -fsigned-char -Wtype-limits -Wignored-qualifiers -Wpointer-arith -Werror=format-security -Winit-self -Wno-unknown-pragmas -Wnon-virtual-dtor -Wno-ignored-qualifiers -ftemplate-depth-1024 -Wpessimizing-move -Wredundant-move -Wstrict-null-sentinel -Woverloaded-virtual -fno-new-ttp-matching -fstack-protector-strong -fdiagnostics-color=auto -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -std=c++17 -MD -MT src/CMakeFiles/common-objs.dir/mds/FSMapUser.cc.o -MF src/CMakeFiles/common-objs.dir/mds/FSMapUser.cc.o.d -o src/CMakeFiles/common-objs.dir/mds/FSMapUser.cc.o -c /var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src/mds/FSMapUser.cc
+In file included from /var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src/log/SubsystemMap.h:12,
+                 from /var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src/common/config.h:23,
+                 from /var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src/mds/mdstypes.h:13,
+                 from /var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src/mds/FSMapUser.h:21,
+                 from /var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src/mds/FSMapUser.cc:1:
+/var/tmp/portage/sys-cluster/ceph-17.2.5/work/ceph-17.2.5/src/common/subsys_types.h:56:23: error: ‘uint8_t’ in namespace ‘std’ does not name a type; did you mean ‘wint_t’?
+```
+
+Bug: https://bugs.gentoo.org/878531
+Signed-off-by: Sam James <sam@gentoo.org>
+---
+ src/common/subsys_types.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/common/subsys_types.h b/src/common/subsys_types.h
+index 52171809b23fd..bd7cc439e8dc3 100644
+--- a/src/common/subsys_types.h
++++ b/src/common/subsys_types.h
+@@ -17,6 +17,7 @@
+ 
+ #include <algorithm>
+ #include <array>
++#include <cstdint>
+ 
+ enum ceph_subsys_id_t {
+   ceph_subsys_,   // default
