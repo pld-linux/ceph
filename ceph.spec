@@ -103,7 +103,7 @@ BuildRequires:	gperf
 %{?with_kerberos:BuildRequires:	heimdal-devel}
 %{?with_seastar:BuildRequires:	hwloc-devel >= 1.11.2}
 %if %{with java}
-%{?use_jdk:%buildrequires_jdk}%{!?use_jdk:BuildRequires:  jdk}
+%buildrequires_jdk
 BuildRequires:	%{?use_jdk:%{use_jdk}-jre-base-X11}%{!?use_jdk:jre-X11}
 %endif
 BuildRequires:	keyutils-devel
