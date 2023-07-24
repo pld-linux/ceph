@@ -9,7 +9,7 @@
  
  #include <string_view>
  
-@@ -26,3 +28,21 @@ struct fmt::formatter<std::map<A, B, Com
+@@ -26,3 +28,24 @@ struct fmt::formatter<std::map<A, B, Com
      return fmt::format_to(ctx.out(), "}}");
    }
  };
@@ -31,6 +31,9 @@
 +
 +template <typename T>
 +struct fmt::formatter<boost::intrusive_ptr<T>> : ostream_formatter {};
++
++template <typename T>
++struct fmt::formatter<ceph_le<T>> : ostream_formatter {};
 --- ceph-17.2.3/src/common/Journald.cc.orig	2022-09-04 18:08:09.890385180 +0200
 +++ ceph-17.2.3/src/common/Journald.cc	2022-09-07 17:20:33.128007133 +0200
 @@ -21,6 +21,7 @@
@@ -43,13 +46,16 @@
  namespace ceph::logging {
 --- ceph-17.2.3/src/common/hobject_fmt.h.orig	2022-07-28 23:52:12.000000000 +0200
 +++ ceph-17.2.3/src/common/hobject_fmt.h	2022-09-07 18:23:08.743232468 +0200
-@@ -50,3 +50,6 @@ template <> struct fmt::formatter<hobjec
+@@ -50,3 +50,9 @@ template <> struct fmt::formatter<hobjec
  			  ho.get_bitwise_key_u32(), v, ho.snap);
    }
  };
 +
 +template <>
 +struct fmt::formatter<ghobject_t> : ostream_formatter {};
++
++template <>
++struct fmt::formatter<snapid_t> : ostream_formatter {};
 --- ceph-17.2.3/src/crimson/admin/admin_socket.cc.orig	2022-07-28 23:52:12.000000000 +0200
 +++ ceph-17.2.3/src/crimson/admin/admin_socket.cc	2022-09-08 17:39:11.969465247 +0200
 @@ -19,6 +19,7 @@
@@ -1866,3 +1872,60 @@
  #include "messages/MOSDOp.h"
  
  #include "crimson/auth/DummyAuth.h"
+--- ceph-17.2.6/src/msg/async/frames_v2.cc.orig	2023-04-05 17:09:51.000000000 +0200
++++ ceph-17.2.6/src/msg/async/frames_v2.cc	2023-07-23 19:36:01.099940933 +0200
+@@ -13,6 +13,7 @@
+  */
+ 
+ #include "frames_v2.h"
++#include "include/types_fmt.h"
+ 
+ #include <ostream>
+ 
+--- ceph-17.2.6/src/tools/neorados.cc.orig	2023-07-23 22:23:34.495477015 +0200
++++ ceph-17.2.6/src/tools/neorados.cc	2023-07-24 06:24:15.432545633 +0200
+@@ -143,7 +143,7 @@ void create(R::RADOS& r, const std::vect
+     throw bs::system_error(ec,
+ 			   fmt::format(
+ 			     "when creating object '{}' in pool '{}'",
+-			     obj, pname));
++			     fmt::streamed(obj), pname));
+ }
+ 
+ inline constexpr std::size_t io_size = 4 << 20;
+@@ -179,7 +179,7 @@ void write(R::RADOS& r, const std::vecto
+     if (ec)
+       throw bs::system_error(ec, fmt::format(
+ 			       "when writing object '{}' in pool '{}'",
+-			       obj, pname));
++			       fmt::streamed(obj), pname));
+   }
+ }
+ 
+@@ -200,7 +200,7 @@ void read(R::RADOS& r, const std::vector
+       throw bs::system_error(
+ 	ec,
+ 	fmt::format("when getting length of object '{}' in pool '{}'",
+-		    obj, pname));
++		    fmt::streamed(obj), pname));
+   }
+ 
+   std::size_t off = 0;
+@@ -213,7 +213,7 @@ void read(R::RADOS& r, const std::vector
+       throw bs::system_error(
+ 	ec,
+ 	fmt::format("when reading from object '{}' in pool '{}'",
+-		    obj, pool));
++		    fmt::streamed(obj), pool));
+ 
+     off += bl.length();
+     bl.write_stream(std::cout);
+@@ -234,7 +234,7 @@ void rm(R::RADOS& r, const std::vector<s
+   if (ec)
+     throw bs::system_error(ec, fmt::format(
+ 			     "when removing object '{}' in pool '{}'",
+-			     obj, pname));
++			     fmt::streamed(obj), pname));
+ }
+ 
+ static constexpr auto version = std::make_tuple(0ul, 0ul, 1ul);

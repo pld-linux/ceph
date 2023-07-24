@@ -55,8 +55,8 @@ index 9166553dc73..9a6c87595b9 100644
  add_custom_target(ceph-volume-venv-setup
    DEPENDS ${CEPH_VOLUME_VIRTUALENV}/bin/ceph-volume)
  
---- a/src/pybind/mgr/dashboard/frontend/CMakeLists.txt
-+++ b/src/pybind/mgr/dashboard/frontend/CMakeLists.txt
+--- ceph-17.2.6/src/pybind/mgr/dashboard/frontend/CMakeLists.txt.orig	2023-04-05 17:09:51.000000000 +0200
++++ ceph-17.2.6/src/pybind/mgr/dashboard/frontend/CMakeLists.txt	2023-07-23 18:16:30.189120508 +0200
 @@ -5,17 +5,10 @@ function(add_npm_command)
    set(multi_kw COMMAND DEPENDS)
    cmake_parse_arguments(NC "${options}" "${single_kw}" "${multi_kw}" ${ARGN})
@@ -93,10 +93,10 @@ index 9166553dc73..9a6c87595b9 100644
 -    OUTPUT "${mgr-dashboard-nodeenv-dir}/bin/npm"
 -    COMMAND ${CMAKE_SOURCE_DIR}/src/tools/setup-virtualenv.sh --python=${MGR_PYTHON_EXECUTABLE} ${mgr-dashboard-nodeenv-dir}
 -    COMMAND ${mgr-dashboard-nodeenv-dir}/bin/pip install nodeenv
--    COMMAND ${mgr-dashboard-nodeenv-dir}/bin/nodeenv --verbose ${node_mirror_opt} -p --node=12.18.2
+-    COMMAND ${mgr-dashboard-nodeenv-dir}/bin/nodeenv --verbose ${node_mirror_opt} -p --node=14.15.1
 -    COMMAND mkdir ${mgr-dashboard-nodeenv-dir}/.npm
 +    OUTPUT "/bin/npm"
-+    COMMAND /bin/nodeenv --verbose ${node_mirror_opt} -p --node=12.18.2
++    COMMAND /bin/nodeenv --verbose ${node_mirror_opt} -p --node=14.15.1
      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
      COMMENT "dashboard nodeenv is being installed")
    if(DEFINED ENV{NPM_REGISTRY})

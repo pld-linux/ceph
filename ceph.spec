@@ -8,6 +8,7 @@
 # - package sphinx docs (from doc/)
 #
 # Note on versioning: http://docs.ceph.com/docs/master/releases/
+# Reef (18.1.2) is in RC stage currently
 #
 # Conditional build:
 %bcond_without	java		# Java binding
@@ -49,12 +50,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	17.2.5
-Release:	2
+Version:	17.2.6
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	e331cea04680ea8ff982a58c516d7611
+# Source0-md5:	aba03b7caacc590295b09829e0d4f088
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-python.patch
