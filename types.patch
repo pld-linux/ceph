@@ -9,9 +9,9 @@
  {
    d(5) << size << dendl;
  
---- ceph-16.2.7/src/os/bluestore/BlueFS.cc~	2021-12-07 17:15:49.000000000 +0100
-+++ ceph-16.2.7/src/os/bluestore/BlueFS.cc	2022-02-12 21:40:54.182516511 +0100
-@@ -3799,7 +3799,7 @@
+--- ceph-17.2.7/src/os/bluestore/BlueFS.cc.orig	2024-02-24 21:45:42.755706899 +0100
++++ ceph-17.2.7/src/os/bluestore/BlueFS.cc	2024-02-24 21:51:20.641018002 +0100
+@@ -4617,7 +4617,7 @@ size_t BlueFS::probe_alloc_avail(int dev
      if (dist_to_alignment >= len)
        return;
      len -= dist_to_alignment;
@@ -19,7 +19,7 @@
 +    total += p2align((uint64_t)len, alloc_size);
    };
    if (alloc[dev]) {
-     alloc[dev]->dump(iterated_allocation);
+     alloc[dev]->foreach(iterated_allocation);
 --- ceph-16.2.7/src/librbd/object_map/DiffRequest.cc.orig	2021-12-07 17:15:49.000000000 +0100
 +++ ceph-16.2.7/src/librbd/object_map/DiffRequest.cc	2022-02-12 22:17:55.163378523 +0100
 @@ -187,7 +187,7 @@
