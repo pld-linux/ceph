@@ -125,7 +125,7 @@ BuildRequires:	libnl-devel >= 3.2
 BuildRequires:	librdkafka-devel >= 0.9.2
 %{?with_rdma:BuildRequires:	librdmacm-devel}
 %{?with_seastar:BuildRequires:	libsctp-devel}
-BuildRequires:	libstdc++-devel >= 6:7
+BuildRequires:	libstdc++-devel >= 6:11
 %{?with_tcmalloc:BuildRequires:	libtcmalloc-devel >= 2.6.2}
 BuildRequires:	libtool >= 2:1.5
 BuildRequires:	liburing-devel
@@ -225,7 +225,7 @@ Requires:	nss-devel >= 3
 Requires:	leveldb-devel >= 1.23-2
 Requires:	libatomic_ops
 Requires:	libblkid-devel >= 2.17
-Requires:	libstdc++-devel >= 6:7
+Requires:	libstdc++-devel >= 6:11
 Requires:	libuuid-devel
 %{?with_lttng:Requires:	lttng-ust-devel}
 Requires:	openldap-devel
