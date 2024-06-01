@@ -55,8 +55,8 @@ index 9166553dc73..9a6c87595b9 100644
  add_custom_target(ceph-volume-venv-setup
    DEPENDS ${CEPH_VOLUME_VIRTUALENV}/bin/ceph-volume)
  
---- ceph-17.2.6/src/pybind/mgr/dashboard/frontend/CMakeLists.txt.orig	2023-04-05 17:09:51.000000000 +0200
-+++ ceph-17.2.6/src/pybind/mgr/dashboard/frontend/CMakeLists.txt	2023-07-23 18:16:30.189120508 +0200
+--- ceph-18.2.3/src/pybind/mgr/dashboard/frontend/CMakeLists.txt.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/pybind/mgr/dashboard/frontend/CMakeLists.txt	2024-05-28 22:14:17.752405303 +0200
 @@ -5,17 +5,10 @@ function(add_npm_command)
    set(multi_kw COMMAND DEPENDS)
    cmake_parse_arguments(NC "${options}" "${single_kw}" "${multi_kw}" ${ARGN})
@@ -75,7 +75,7 @@ index 9166553dc73..9a6c87595b9 100644
    string(REPLACE " " ";" command "${command}")
    add_custom_command(
      OUTPUT "${NC_OUTPUT}"
-@@ -36,9 +29,7 @@ function(add_npm_options)
+@@ -36,9 +29,8 @@ function(add_npm_options)
      list(GET opt 1 value)
      list(APPEND commands
        COMMAND
@@ -83,20 +83,21 @@ index 9166553dc73..9a6c87595b9 100644
 -      npm config set ${key} ${value} --userconfig ${NC_NODEENV_DIR}/.npmrc &&
 -      deactivate)
 +      npm config set ${key} ${value} --userconfig ${NC_NODEENV_DIR}/.npmrc
++      )
    endforeach()
+   set(npm_config_python ${MGR_PYTHON_EXECUTABLE})
    add_custom_target(${NC_TARGET}
-     ${commands}
-@@ -60,11 +51,8 @@ else(WITH_SYSTEM_NPM)
+@@ -61,11 +53,8 @@ else(WITH_SYSTEM_NPM)
      set(node_mirror_opt "--mirror=$ENV{NODE_MIRROR}")
    endif()
    add_custom_command(
 -    OUTPUT "${mgr-dashboard-nodeenv-dir}/bin/npm"
 -    COMMAND ${CMAKE_SOURCE_DIR}/src/tools/setup-virtualenv.sh --python=${MGR_PYTHON_EXECUTABLE} ${mgr-dashboard-nodeenv-dir}
 -    COMMAND ${mgr-dashboard-nodeenv-dir}/bin/pip install nodeenv
--    COMMAND ${mgr-dashboard-nodeenv-dir}/bin/nodeenv --verbose ${node_mirror_opt} -p --node=14.15.1
+-    COMMAND ${mgr-dashboard-nodeenv-dir}/bin/nodeenv --verbose ${node_mirror_opt} -p --node=18.17.0
 -    COMMAND mkdir ${mgr-dashboard-nodeenv-dir}/.npm
 +    OUTPUT "/bin/npm"
-+    COMMAND /bin/nodeenv --verbose ${node_mirror_opt} -p --node=14.15.1
++    COMMAND /bin/nodeenv --verbose ${node_mirror_opt} -p --node=18.17.0
      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
      COMMENT "dashboard nodeenv is being installed")
    if(DEFINED ENV{NPM_REGISTRY})

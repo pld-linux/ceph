@@ -1,4 +1,6 @@
 # TODO:
+# - thrift 0.13+ for jaeger
+# - Could NOT find dml (missing: DML_LIBRARIES DML_INCLUDE_DIR DML_HL_LIBRARIES)
 # - system arrow, parquet (WITH_SYSTEM_ARROW=ON, arrow>=4, parquet>=4)?
 # - brotli? (WITH_BROTLI=ON, uses internal brotli as downloaded subproject)
 # - proper init scripts if non-systemd boot is to be supported
@@ -19,6 +21,7 @@
 # src/rgw/rgw_fcgi_process.cc:92:53: error: 'class rgw::sal::RGWRadosStore' has no member named 'get_new_req_id'
 %bcond_with	fcgi		# RADOS Gateway FCGI frontend
 %bcond_with	fio		# FIO engines support (16.x: downloads fio as internal subproject)
+%bcond_with	jaeger		# jaegertracing support (NFY, BR: thrift >= 0.13)
 %bcond_with	kerberos	# GSSAPI/KRB5 support
 %bcond_without	pmem		# PMDK (persistent memory) support
 %bcond_without	qat		# QAT driver
@@ -50,12 +53,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	17.2.7
+Version:	18.2.3
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	843fb59f95f62e0e156539e49a2a3a9a
+# Source0-md5:	cfa96354e8cd5168c8c42ff9fafc49a4
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-python.patch
@@ -81,13 +84,13 @@ Patch17:	boost1.81.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
-BuildRequires:	boost-devel >= 1.73
-BuildRequires:	boost-python3-devel >= 1.73
+BuildRequires:	boost-devel >= 1.79
+BuildRequires:	boost-python3-devel >= 1.79
 %{?with_seastar:BuildRequires:	c-ares-devel >= 1.13.0}
 BuildRequires:	cmake >= 3.22.2
 %{?with_seastar:BuildRequires:	cryptopp-devel >= 5.6.5}
 BuildRequires:	cryptsetup-devel >= 2.0.5
-BuildRequires:	curl-devel
+BuildRequires:	curl-devel >= 7.32
 %if %{with dpdk} || %{with spdk}
 # also seastar with dpdk support
 BuildRequires:	dpdk-devel
@@ -144,11 +147,11 @@ BuildRequires:	openssl-devel >= 1.1
 BuildRequires:	perl-base
 BuildRequires:	pkgconfig
 %{?with_pmem:BuildRequires:	pmdk-devel >= 1.10.0}
-BuildRequires:	python3 >= 1:3.2
+BuildRequires:	python3 >= 1:3.6.0
 BuildRequires:	python3-Cython
 BuildRequires:	python3-PyYAML
-BuildRequires:	python3-devel >= 1:3.2
-BuildRequires:	python3-modules >= 1:3.2
+BuildRequires:	python3-devel >= 1:3.6.0
+BuildRequires:	python3-modules >= 1:3.6.0
 %{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
 BuildRequires:	rabbitmq-c-devel
 %{?with_seastar:BuildRequires:	ragel >= 6.10}
@@ -159,7 +162,7 @@ BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
 BuildRequires:	sphinx-pdg >= 4.4.0
 BuildRequires:	sqlite3-devel >= 3
-# >= 0.13.0 wanted, but seems to build with 0.11.0
+# >= 0.13.0 wanted, but seems to build with 0.11.0 when jaeger is disabled
 BuildRequires:	thrift-devel
 BuildRequires:	udev-devel
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
@@ -214,8 +217,8 @@ Summary(pl.UTF-8):	Pliki nagłówkowe bibliotek Cepha
 License:	LGPL v2.1
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
-Requires:	boost-devel >= 1.73
-Requires:	curl-devel
+Requires:	boost-devel >= 1.79
+Requires:	curl-devel >= 7.32
 Requires:	expat-devel >= 1.95
 Requires:	fcgi-devel
 Requires:	nss-devel >= 3
@@ -357,7 +360,7 @@ uruchamiania demonów.
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
-	src/rgw/rgw-{gap,orphan}-list
+	src/rgw/{rgw-gap-list,rgw-orphan-list,rgw-restore-bucket-index}
 
 %{__sed} -i -e '1s,/usr/bin/awk,/bin/awk,' \
 	src/rgw/rgw-gap-list-comparator
@@ -404,6 +407,7 @@ cd build
 	%{?with_dpdk:-DWITH_DPDK=ON} \
 	%{?with_fio:-DWITH_FIO=ON} \
 	%{?with_kerberos:-DWITH_GSSAPI=ON} \
+	%{!?with_jaeger:-DWITH_JAEGER=OFF} \
 	%{!?with_lttng:-DWITH_LTTNG=OFF} \
 	-DWITH_LZ4=ON \
 	%{!?with_angular:-DWITH_MGR_DASHBOARD_FRONTEND=OFF} \
@@ -501,6 +505,7 @@ fi
 %{systemdunitdir}/ceph.service
 %{systemdunitdir}/ceph.target
 %{systemdunitdir}/ceph-crash.service
+%{systemdunitdir}/ceph-exporter.service
 %{systemdunitdir}/ceph-fuse.target
 %{systemdunitdir}/ceph-fuse@.service
 %{systemdunitdir}/ceph-immutable-object-cache.target
@@ -570,7 +575,10 @@ fi
 %attr(755,root,root) %{_bindir}/rgw-gap-list
 %attr(755,root,root) %{_bindir}/rgw-gap-list-comparator
 %attr(755,root,root) %{_bindir}/rgw-orphan-list
+%attr(755,root,root) %{_bindir}/rgw-restore-bucket-index
+%attr(755,root,root) %{_sbindir}/cephadm
 %attr(755,root,root) %{_sbindir}/ceph-create-keys
+%attr(755,root,root) %{_sbindir}/ceph-node-proxy
 %attr(755,root,root) %{_sbindir}/ceph-volume
 %attr(755,root,root) %{_sbindir}/ceph-volume-systemd
 %attr(755,root,root) /sbin/mount.ceph
@@ -618,6 +626,8 @@ fi
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_lrc.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec.so*
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_shec_generic.so*
+%dir %{_libdir}/ceph/extblkdev
+%attr(755,root,root) %{_libdir}/ceph/extblkdev/libceph_ebd_vdo.so*
 %dir %{_libdir}/ceph/librbd
 %attr(755,root,root) %{_libdir}/ceph/librbd/libceph_librbd_parent_cache.so*
 %dir %{_libdir}/rados-classes
@@ -717,8 +727,6 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librados.so.2
 %attr(755,root,root) %{_libdir}/librados_tp.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/librados_tp.so.2
-%attr(755,root,root) %{_libdir}/libradosgw.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libradosgw.so.2
 %attr(755,root,root) %{_libdir}/libradosstriper.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libradosstriper.so.1
 %attr(755,root,root) %{_libdir}/librbd.so.*.*.*
@@ -742,7 +750,6 @@ fi
 %attr(755,root,root) %{_libdir}/libosd_tp.so
 %attr(755,root,root) %{_libdir}/librados.so
 %attr(755,root,root) %{_libdir}/librados_tp.so
-%attr(755,root,root) %{_libdir}/libradosgw.so
 %attr(755,root,root) %{_libdir}/libradosstriper.so
 %attr(755,root,root) %{_libdir}/librbd.so
 %attr(755,root,root) %{_libdir}/librbd_tp.so
@@ -768,8 +775,10 @@ fi
 %{py3_sitescriptdir}/ceph_*.py
 %{py3_sitescriptdir}/__pycache__/ceph_*.py*
 %{py3_sitescriptdir}/ceph
-%{py3_sitescriptdir}/ceph_volume
 %{py3_sitescriptdir}/ceph-1.0.0-py*.egg-info
+%{py3_sitescriptdir}/ceph_node_proxy
+%{py3_sitescriptdir}/ceph_node_proxy-1.0.0-py*.egg-info
+%{py3_sitescriptdir}/ceph_volume
 %{py3_sitescriptdir}/ceph_volume-1.0.0-py*.egg-info
 %{py3_sitescriptdir}/cephfs_top-0.0.1-py*.egg-info
 
@@ -794,12 +803,14 @@ fi
 %attr(755,root,root) %{_bindir}/radosgw-es
 %attr(755,root,root) %{_bindir}/radosgw-object-expirer
 %attr(755,root,root) %{_bindir}/radosgw-token
+%attr(755,root,root) %{_bindir}/rgw-policy-check
 %{systemdunitdir}/ceph-radosgw.target
 %{systemdunitdir}/ceph-radosgw@.service
 %{_sysconfdir}/bash_completion.d/radosgw-admin
 %dir %{_localstatedir}/lib/ceph/radosgw
 %{_mandir}/man8/radosgw.8*
 %{_mandir}/man8/radosgw-admin.8*
+%{_mandir}/man8/rgw-policy-check.8*
 
 %files resource-agents
 %defattr(644,root,root,755)

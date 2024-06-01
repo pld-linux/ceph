@@ -1,13 +1,3 @@
---- ceph-17.2.7/src/common/hobject_fmt.h	2023-10-26 01:46:16.000000000 +0200
-+++ ceph-17.2.7.mod/src/common/hobject_fmt.h	2024-03-03 07:44:04.994865841 +0100
-@@ -9,6 +9,7 @@
- #include <fmt/ranges.h>
- 
- #include "common/hobject.h"
-+#include "include/object_fmt.h"
- #include "include/types_fmt.h"
- #include "msg/msg_fmt.h"
- 
 --- ceph-17.2.7/src/common/LogEntry.h	2023-10-26 01:46:16.000000000 +0200
 +++ ceph-17.2.7.mod/src/common/LogEntry.h	2024-03-02 07:42:35.321554400 +0100
 @@ -18,6 +18,7 @@
@@ -28,36 +18,37 @@
  template <> struct fmt::formatter<EntityName> : fmt::formatter<std::string_view> {
    template <typename FormatContext>
    auto format(const EntityName& e, FormatContext& ctx) {
---- ceph-17.2.7/src/include/types_fmt.h	2023-10-26 01:46:16.000000000 +0200
-+++ ceph-17.2.7.mod/src/include/types_fmt.h	2024-03-02 09:54:14.238851992 +0100
-@@ -6,6 +6,7 @@
-  */
+--- ceph-18.2.3/src/include/types.h.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/include/types.h	2024-05-29 06:11:52.665464115 +0200
+@@ -612,6 +612,12 @@ inline std::ostream &operator<<(std::ost
  
- #include <fmt/format.h>
-+#include <fmt/ostream.h>
- 
- #include <string_view>
- 
-@@ -26,3 +27,9 @@
-     return fmt::format_to(ctx.out(), "}}");
-   }
- };
+ #if FMT_VERSION >= 90000
+ template <uint8_t S> struct fmt::formatter<sha_digest_t<S>> : fmt::ostream_formatter {};
 +
 +template <typename T>
 +struct fmt::formatter<ceph_le<T>> : ostream_formatter {};
 +
 +template <>
 +struct fmt::formatter<shard_id_t> : ostream_formatter {};
---- ceph-17.2.7/src/msg/async/frames_v2.cc	2023-10-26 01:46:16.000000000 +0200
-+++ ceph-17.2.7.mod/src/msg/async/frames_v2.cc	2024-03-01 19:04:33.315590782 +0100
-@@ -13,6 +13,7 @@
+ #endif
+ 
+ using sha1_digest_t = sha_digest_t<20>;
+--- ceph-18.2.3/src/msg/async/frames_v2.cc.orig	2024-05-29 06:09:22.381732484 +0200
++++ ceph-18.2.3/src/msg/async/frames_v2.cc	2024-05-29 22:07:02.928224740 +0200
+@@ -12,12 +12,11 @@
+  *
   */
  
++#include <fmt/format.h>
  #include "frames_v2.h"
-+#include "include/types_fmt.h"
  
  #include <ostream>
  
+-#include <fmt/format.h>
+-
+ namespace ceph::msgr::v2 {
+ 
+ // Unpads bufferlist to unpadded_len.
 --- ceph-17.2.7/src/tools/neorados.cc	2024-03-03 19:54:51.414457588 +0100
 +++ ceph-17.2.7.mod/src/tools/neorados.cc	2024-03-03 15:18:02.793213584 +0100
 @@ -143,7 +143,7 @@
@@ -105,3 +96,89 @@
  }
  
  static constexpr auto version = std::make_tuple(0ul, 0ul, 1ul);
+--- ceph-18.2.3/src/osd/scrubber/pg_scrubber.cc.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/osd/scrubber/pg_scrubber.cc	2024-05-29 22:24:08.877821930 +0200
+@@ -1,14 +1,15 @@
+ // -*- mode:C++; tab-width:8; c-basic-offset:2; indent-tabs-mode:t -*-
+ // vim: ts=2 sw=2 smarttab
+ 
++#include <fmt/chrono.h>
++#include <fmt/ranges.h>
++
+ #include "./pg_scrubber.h"  // '.' notation used to affect clang-format order
+ 
+ #include <cmath>
+ #include <iostream>
+ #include <vector>
+ 
+-#include <fmt/ranges.h>
+-
+ #include "debug.h"
+ 
+ #include "common/ceph_time.h"
+@@ -2818,7 +2819,7 @@ ReplicaReservations::no_reply_t::no_repl
+   m_abort_callback = new LambdaContext([this, now_is]([[maybe_unused]] int r) {
+     // behave as if a REJECT was received
+     m_osds->clog->warn() << fmt::format(
+-      "{} timeout on replica reservations (since {})", m_log_prfx, now_is);
++      "{} timeout on replica reservations (since {})", m_log_prfx, fmt::streamed(now_is));
+     m_parent.handle_no_reply_timeout();
+   });
+ 
+--- ceph-18.2.3/src/osd/osd_types_fmt.h.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/osd/osd_types_fmt.h	2024-05-30 08:08:23.439099461 +0200
+@@ -57,7 +57,7 @@ struct fmt::formatter<chunk_info_t> {
+   constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+ 
+   template <typename FormatContext>
+-  auto format(const chunk_info_t& ci, FormatContext& ctx)
++  auto format(const chunk_info_t& ci, FormatContext& ctx) const
+   {
+     return fmt::format_to(ctx.out(), "(len: {} oid: {} offset: {} flags: {})",
+ 			  ci.length, ci.oid, ci.offset,
+--- ceph-18.2.3/src/osd/scrubber/scrub_backend.cc.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/osd/scrubber/scrub_backend.cc	2024-05-30 08:44:07.822017763 +0200
+@@ -1,12 +1,12 @@
+ // -*- m_mode_desc:C++; tab-width:8; c-basic-offset:2; indent-tabs-m_mode_desc:t
+ // -*- vim: ts=2 sw=2 smarttab
+ 
++#include <fmt/ranges.h>
++
+ #include "./scrub_backend.h"
+ 
+ #include <algorithm>
+ 
+-#include <fmt/ranges.h>
+-
+ #include "common/debug.h"
+ 
+ #include "include/utime_fmt.h"
+--- ceph-18.2.3/src/osd/SnapMapper.cc.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/osd/SnapMapper.cc	2024-05-30 10:36:46.329449365 +0200
+@@ -211,7 +211,7 @@ string SnapMapper::get_prefix(int64_t po
+   return fmt::sprintf("%s%lld_%.16X_",
+ 		      MAPPING_PREFIX,
+ 		      pool,
+-		      snap);
++		      snap.val);
+ }
+ 
+ string SnapMapper::to_raw_key(
+@@ -650,7 +650,7 @@ string SnapMapper::make_purged_snap_key(
+   return fmt::sprintf("%s_%lld_%016llx",
+ 		      PURGED_SNAP_PREFIX,
+ 		      pool,
+-		      last);
++		      last.val);
+ }
+ 
+ void SnapMapper::make_purged_snap_key_value(
+@@ -866,7 +866,7 @@ string SnapMapper::get_legacy_prefix(sna
+ {
+   return fmt::sprintf("%s%.16X_",
+ 		      LEGACY_MAPPING_PREFIX,
+-		      snap);
++		      snap.val);
+ }
+ 
+ string SnapMapper::to_legacy_raw_key(

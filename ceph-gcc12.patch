@@ -19,10 +19,10 @@
    }
  }
  
---- ceph-16.2.7/src/test/librados/tier_cxx.cc.orig	2022-01-19 09:30:47.209459506 -0500
-+++ ceph-16.2.7/src/test/librados/tier_cxx.cc	2022-01-19 10:02:47.783240298 -0500
-@@ -114,7 +114,7 @@
- #include "rgw/rgw_common.h"
+--- ceph-18.2.3/src/test/librados/tier_cxx.cc.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/test/librados/tier_cxx.cc	2024-05-29 06:30:11.278773257 +0200
+@@ -120,7 +120,7 @@ static inline void buf_to_hex(const unsi
+ }
  
  void check_fp_oid_refcount(librados::IoCtx& ioctx, std::string foid, uint64_t count,
 -			   std::string fp_algo = NULL)
@@ -30,7 +30,7 @@
  {
    bufferlist t;
    int size = foid.length();
-@@ -142,7 +142,7 @@
+@@ -148,7 +148,7 @@ void check_fp_oid_refcount(librados::IoC
    ASSERT_LE(count, refs.count());
  }
  
@@ -39,17 +39,6 @@
  {
    if (fp_algo == "sha1") {
      unsigned char fingerprint[CEPH_CRYPTO_SHA1_DIGESTSIZE + 1];
---- ceph-16.2.7/src/test/test_trans.cc.orig	2022-01-19 13:24:33.460008897 -0500
-+++ ceph-16.2.7/src/test/test_trans.cc	2022-01-19 13:24:58.211554005 -0500
-@@ -51,7 +51,7 @@
-   cout << "#dev " << filename << std::endl;
-   cout << "#mb " << mb << std::endl;
- 
--  ObjectStore *fs = new FileStore(cct.get(), filename, NULL);
-+  ObjectStore *fs = new FileStore(cct.get(), filename, "");
-   if (fs->mount() < 0) {
-     cout << "mount failed" << std::endl;
-     return -1;
 --- ceph-17.0.0-10335-gfd206722/src/s3select/include/s3select_functions.h.orig	2022-02-11 17:21:40.268627997 -0500
 +++ ceph-17.0.0-10335-gfd206722/src/s3select/include/s3select_functions.h	2022-02-11 17:21:57.155325437 -0500
 @@ -466,7 +466,7 @@

@@ -62,10 +62,10 @@
      set_target_properties(QatDrv::${component} PROPERTIES
                            INTERFACE_INCLUDE_DIRECTORIES "${QatDrv_INCLUDE_DIRS}"
                            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
---- ceph-17.2.3/src/compressor/CMakeLists.txt.orig	2022-07-28 23:52:12.000000000 +0200
-+++ ceph-17.2.3/src/compressor/CMakeLists.txt	2022-08-28 18:59:38.018324891 +0200
-@@ -7,8 +7,8 @@ endif()
- add_library(compressor_objs OBJECT ${compressor_srcs})
+--- ceph-18.2.3/src/compressor/CMakeLists.txt.orig	2024-05-28 22:34:42.686872365 +0200
++++ ceph-18.2.3/src/compressor/CMakeLists.txt	2024-05-28 22:35:39.740566246 +0200
+@@ -8,8 +8,8 @@ add_library(compressor_objs OBJECT ${com
+ add_dependencies(compressor_objs common-objs)
  if(HAVE_QATZIP AND HAVE_QATDRV)
    target_link_libraries(compressor_objs PRIVATE
 -                        QatDrv::qat_s
@@ -100,3 +100,40 @@
  }
  
  class QccCrypto {
+--- ceph-18.2.3/src/compressor/QatAccel.cc.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/compressor/QatAccel.cc	2024-05-29 20:08:56.061825894 +0200
+@@ -42,14 +42,20 @@ void QzSessionDeleter::operator() (struc
+   delete session;
+ }
+ 
+-static bool get_qz_params(const std::string &alg, QzSessionParams_T &params) {
++static bool get_qz_params(const std::string &alg, QzSessionParams_T &params, QzSessionParamsDeflate_T &deflate_params) {
+   int rc;
+   rc = qzGetDefaults(&params);
+   if (rc != QZ_OK)
+     return false;
+   params.direction = QZ_DIR_BOTH;
+-  params.is_busy_polling = true;
+   if (alg == "zlib") {
++    rc = qzGetDefaultsDeflate(&deflate_params);
++    if (rc != QZ_OK)
++      return false;
++    deflate_params.common_params.polling_mode = QZ_BUSY_POLLING;
++    rc = qzSetDefaultsDeflate(&deflate_params);
++    if (rc != QZ_OK)
++      return false;
+     params.comp_algorithm = QZ_DEFLATE;
+     params.data_fmt = QZ_DEFLATE_RAW;
+     params.comp_lvl = g_ceph_context->_conf->compressor_zlib_level;
+@@ -114,9 +120,10 @@ QatAccel::session_ptr QatAccel::get_sess
+   // If there are no available session to use, we try allocate a new
+   // session.
+   QzSessionParams_T params = {(QzHuffmanHdr_T)0,};
++  QzSessionParamsDeflate_T deflate_params = {};
+   session_ptr session(new struct QzSession_S());
+   memset(session.get(), 0, sizeof(struct QzSession_S));
+-  if (get_qz_params(alg_name, params) && setup_session(session, params)) {
++  if (get_qz_params(alg_name, params, deflate_params) && setup_session(session, params)) {
+     return session;
+   } else {
+     return nullptr;

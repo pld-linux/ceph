@@ -27,3 +27,14 @@
      else()
        list(APPEND options --root=/)
      endif()
+--- ceph-18.2.3/src/cephadm/build.py.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/cephadm/build.py	2024-05-30 20:51:47.139755410 +0200
+@@ -85,7 +85,7 @@ def _compile(dest, tempdir):
+         maxlevels=16,
+         legacy=True,
+         quiet=1,
+-        workers=0,
++        workers=1,
+     )
+     # TODO we could explicitly pass a python version here
+     log.info("Constructing the zipapp file")
