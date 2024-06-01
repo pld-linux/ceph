@@ -82,3 +82,33 @@
              ::memcpy(tmp.get_write(), buf.get(), buf.size());
              ::memset(tmp.get_write() + buf.size(), 0, tmp.size() - buf.size());
              buf = std::move(tmp);
+--- ceph-18.2.3/src/osd/OSDMap.cc.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/osd/OSDMap.cc	2024-06-01 18:51:51.915566430 +0200
+@@ -6170,14 +6170,14 @@ int OSDMap::calc_read_balance_score(Ceph
+     }
+     if (prim_pgs_by_osd.count(osd)) {
+       auto n_prims = prim_pgs_by_osd.at(osd).size();
+-      max_prims_per_osd = std::max(max_prims_per_osd, n_prims);
++      max_prims_per_osd = std::max<uint64_t>(max_prims_per_osd, n_prims);
+       if (osd_pa == 0.) {
+         prim_on_zero_pa = true;
+       }
+     }
+     if (acting_prims_by_osd.count(osd)) {
+       auto n_aprims = acting_prims_by_osd.at(osd).size();
+-      max_acting_prims_per_osd = std::max(max_acting_prims_per_osd, n_aprims);
++      max_acting_prims_per_osd = std::max<uint64_t>(max_acting_prims_per_osd, n_aprims);
+       if (osd_pa != 0.) {
+         max_osd_score = std::max(max_osd_score, float(n_aprims) / osd_pa);
+       }
+--- ceph-18.2.3/src/cls/rgw/cls_rgw_types.h.orig	2024-04-24 21:57:21.000000000 +0200
++++ ceph-18.2.3/src/cls/rgw/cls_rgw_types.h	2024-06-01 20:43:58.381041708 +0200
+@@ -1226,7 +1226,7 @@ struct cls_rgw_lc_obj_head
+     uint64_t t = start_date;
+     encode(t, bl);
+     encode(marker, bl);
+-    encode(shard_rollover_date, bl);
++    encode(static_cast<uint64_t>(shard_rollover_date), bl);
+     ENCODE_FINISH(bl);
+   }
+ 
