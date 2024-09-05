@@ -53,12 +53,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	18.2.3
+Version:	18.2.4
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	cfa96354e8cd5168c8c42ff9fafc49a4
+# Source0-md5:	28ab44c5c5a05786ec02b25ae5300b2b
 Source1:	ceph.sysconfig
 Source3:	ceph.tmpfiles
 Patch0:		%{name}-python.patch
@@ -81,6 +81,9 @@ Patch15:	%{name}-gcc12.patch
 # https://src.fedoraproject.org/rpms/ceph/blob/rawhide/f/0020-src-arrow-cpp-cmake_modules-ThirdpartyToolchain.cmake.patch
 Patch16:	%{name}-system-xsimd.patch
 Patch17:	boost1.81.patch
+Patch18:	%{name}-gcc14.patch
+Patch19:	%{name}-gcc14-2.patch
+Patch20:	%{name}-arrow-re2.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -155,6 +158,7 @@ BuildRequires:	python3-modules >= 1:3.6.0
 %{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
 BuildRequires:	rabbitmq-c-devel
 %{?with_seastar:BuildRequires:	ragel >= 6.10}
+BuildRequires:	re2-devel
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.14}
 BuildRequires:	rpmbuild(macros) >= 2.021
 %{?with_qat:BuildRequires:	qatlib-devel}
@@ -357,6 +361,9 @@ uruchamiania demonów.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
+%patch19 -p1
+%patch20 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
