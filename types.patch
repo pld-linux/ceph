@@ -26,11 +26,11 @@
  
    std::size_t off = 0;
    ceph::buffer::list bl;
--  while (auto toread = std::max(len - off, io_size)) {
-+  while (auto toread = std::max(len - off, (uint64_t)io_size)) {
+-  while (auto toread = std::min(len - off, io_size)) {
++  while (auto toread = std::min(len - off, (uint64_t)io_size)) {
      R::ReadOp op;
      op.read(off, toread, &bl);
-     r.execute(obj, pool, std::move(op), nullptr, y[ec]);
+     co_await r.execute(obj, pool, std::move(op), nullptr,
 --- ceph-16.2.7/src/tools/cephfs_mirror/FSMirror.cc.orig	2021-12-07 17:15:49.000000000 +0100
 +++ ceph-16.2.7/src/tools/cephfs_mirror/FSMirror.cc	2022-02-12 22:30:46.487298972 +0100
 @@ -345,7 +345,7 @@
