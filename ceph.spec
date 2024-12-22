@@ -80,6 +80,7 @@ Patch13:	boost-1.86.patch
 Patch14:	boost-1.87.patch
 Patch15:	x32.patch
 Patch16:	ix86.patch
+Patch17:	no-python-deps.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -182,6 +183,8 @@ Requires(preun):	rc-scripts
 Requires:	%{name}-libs = %{version}-%{release}
 Requires:	lz4 >= 1:1.7.3
 Requires:	python3-%{name} = %{version}-%{release}
+Requires:	python3-jinja2 >= 3.1.2
+Requires:	python3-markupsafe >= 2.1.3
 %{?with_system_rocksdb:Requires:	rocksdb >= 5.14}
 Requires:	systemd-units >= 38
 Requires:	zstd >= 1.4.4
@@ -357,6 +360,7 @@ uruchamiania demonów.
 %patch -P 14 -p1
 %patch -P 15 -p1
 %patch -P 16 -p1
+%patch -P 17 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
