@@ -1,0 +1,94 @@
+From 01306208eac492ee0e67bff143fc32d0551a2a6f Mon Sep 17 00:00:00 2001
+From: Luc Ritchie <luc.ritchie@gmail.com>
+Date: Fri, 6 Sep 2024 19:17:53 -0400
+Subject: [PATCH] src/include/uuid.h: fix for boost 1.86.0
+
+Boost 1.86.0 includes a significant rewrite of the UUID library. The
+Changelog[^1] notes that:
+
+> u.data(), where u is of type uuid, now returns a pointer to the first
+> uint8_t of the representation (same as u.begin().) For backward
+> compatibility, data is a function object with operator(), rather than
+> a member function, which allows most existing uses of data as a
+> public member to remain valid, if no longer encouraged.
+
+I don't know enough about C++ to judge how that should have worked, but
+it leads to a compile error here. This patch uses BOOST_VERSION to
+decide whether to access .data as a member or .data() as a function.
+
+[^1]: https://www.boost.org/doc/libs/1_86_0/libs/uuid/doc/html/uuid.html#changes
+
+Signed-off-by: Luc Ritchie <luc.ritchie@gmail.com>
+---
+ src/include/uuid.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/include/uuid.h b/src/include/uuid.h
+index f6ef9878daee7..a5d63c372977a 100644
+--- a/src/include/uuid.h
++++ b/src/include/uuid.h
+@@ -60,7 +60,11 @@ struct uuid_d {
+   }
+ 
+   const char *bytes() const {
++#if BOOST_VERSION >= 108600
++    return (const char*)uuid.data();
++#else
+     return (const char*)uuid.data;
++#endif
+   }
+ 
+   void encode(::ceph::buffer::list::contiguous_appender& p) const {
+diff --git a/src/mgr/PyModule.cc b/src/mgr/PyModule.cc
+index 084cf3ffc1e..010a1177a88 100644
+--- a/src/mgr/PyModule.cc
++++ b/src/mgr/PyModule.cc
+@@ -36,6 +36,11 @@ std::string PyModule::mgr_store_prefix = "mgr/";
+ 
+ // Courtesy of http://stackoverflow.com/questions/1418015/how-to-get-python-exception-text
+ #define BOOST_BIND_GLOBAL_PLACEHOLDERS
++// Fix instances of "'BOOST_PP_ITERATION_02' was not declared in this scope; did you mean 'BOOST_PP_ITERATION_05'"
++// and related macro error bullshit that spans 300 lines of errors
++//
++// Apparently you can't include boost/python stuff _and_ have this header defined
++#undef BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
+ // Boost apparently can't be bothered to fix its own usage of its own
+ // deprecated features.
+ #include <boost/python/extract.hpp>
+diff --git a/src/test/objectstore/Allocator_aging_fragmentation.cc b/src/test/objectstore/Allocator_aging_fragmentation.cc
+index 220f8841b8e..6ddfb02b1dd 100755
+--- a/src/test/objectstore/Allocator_aging_fragmentation.cc
++++ b/src/test/objectstore/Allocator_aging_fragmentation.cc
+@@ -19,6 +19,7 @@
+ #include "os/bluestore/Allocator.h"
+ 
+ #include <boost/random/uniform_int.hpp>
++#include <boost/random/mersenne_twister.hpp>
+ 
+ typedef boost::mt11213b gen_type;
+ 
+diff --git a/src/test/objectstore/Allocator_bench.cc b/src/test/objectstore/Allocator_bench.cc
+index 0d04a854e9a..5218207d2c2 100644
+--- a/src/test/objectstore/Allocator_bench.cc
++++ b/src/test/objectstore/Allocator_bench.cc
+@@ -15,6 +15,7 @@
+ #include "os/bluestore/Allocator.h"
+ 
+ #include <boost/random/uniform_int.hpp>
++#include <boost/random/mersenne_twister.hpp>
+ typedef boost::mt11213b gen_type;
+ 
+ #include "common/debug.h"
+diff --git a/src/test/objectstore/Allocator_test.cc b/src/test/objectstore/Allocator_test.cc
+index b006500153c..0edea1d4ac1 100644
+--- a/src/test/objectstore/Allocator_test.cc
++++ b/src/test/objectstore/Allocator_test.cc
+@@ -14,6 +14,8 @@
+ #include "include/Context.h"
+ #include "os/bluestore/Allocator.h"
+ 
++#include <boost/random/mersenne_twister.hpp>
++
+ using namespace std;
+ 
+ typedef boost::mt11213b gen_type;

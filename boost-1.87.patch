@@ -1,0 +1,320 @@
+From 42986304aeebea7fc0b972ae781bd14000ac1452 Mon Sep 17 00:00:00 2001
+From: Adam Emerson <aemerson@redhat.com>
+Date: Thu, 12 Dec 2024 16:11:04 -0500
+Subject: [PATCH] common/Graylog: Fix Asio resolve call
+
+Signed-off-by: Adam Emerson <aemerson@redhat.com>
+---
+ src/common/Graylog.cc | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/common/Graylog.cc b/src/common/Graylog.cc
+index 099acacd803b8..e9c2565df62eb 100644
+--- a/src/common/Graylog.cc
++++ b/src/common/Graylog.cc
+@@ -37,8 +37,7 @@ void Graylog::set_destination(const std::string& host, int port)
+ {
+   try {
+     boost::asio::ip::udp::resolver resolver(m_io_service);
+-    boost::asio::ip::udp::resolver::query query(host, std::to_string(port));
+-    m_endpoint = *resolver.resolve(query);
++    m_endpoint = *resolver.resolve(host, std::to_string(port)).cbegin();
+     m_log_dst_valid = true;
+   } catch (boost::system::system_error const& e) {
+     cerr << "Error resolving graylog destination: " << e.what() << std::endl;
+From 7f394d095e5620ca3fe860a539ad841affc5e31f Mon Sep 17 00:00:00 2001
+From: Adam Emerson <aemerson@redhat.com>
+Date: Fri, 13 Dec 2024 15:21:49 -0500
+Subject: [PATCH] immutable_object_cache: Asio deprecations
+
+Signed-off-by: Adam Emerson <aemerson@redhat.com>
+---
+ src/tools/immutable_object_cache/CacheClient.cc |  6 +++---
+ src/tools/immutable_object_cache/CacheClient.h  |  5 +++--
+ src/tools/immutable_object_cache/CacheServer.cc | 10 +++++-----
+ 3 files changed, 11 insertions(+), 10 deletions(-)
+
+diff --git a/src/tools/immutable_object_cache/CacheClient.cc b/src/tools/immutable_object_cache/CacheClient.cc
+index 44686529547d3..32a199dbe2102 100644
+--- a/src/tools/immutable_object_cache/CacheClient.cc
++++ b/src/tools/immutable_object_cache/CacheClient.cc
+@@ -20,7 +20,7 @@ namespace ceph {
+ namespace immutable_obj_cache {
+ 
+   CacheClient::CacheClient(const std::string& file, CephContext* ceph_ctx)
+-    : m_cct(ceph_ctx), m_io_service_work(m_io_service),
++    : m_cct(ceph_ctx), m_io_service_work(m_io_service.get_executor()),
+       m_dm_socket(m_io_service), m_ep(stream_protocol::endpoint(file)),
+       m_io_thread(nullptr), m_session_work(false), m_writing(false),
+       m_reading(false), m_sequence_id(0) {
+@@ -30,7 +30,7 @@ namespace immutable_obj_cache {
+ 
+     if (m_worker_thread_num != 0) {
+       m_worker = new boost::asio::io_context();
+-      m_worker_io_service_work = new boost::asio::io_context::work(*m_worker);
++      m_worker_io_service_work = new boost::asio::executor_work_guard<boost::asio::io_context::executor_type>(m_worker->get_executor());
+       for (uint64_t i = 0; i < m_worker_thread_num; i++) {
+         std::thread* thd = new std::thread([this](){m_worker->run();});
+         m_worker_threads.push_back(thd);
+@@ -299,7 +299,7 @@ namespace immutable_obj_cache {
+     });
+ 
+     if (m_worker_thread_num != 0) {
+-      m_worker->post([process_reply]() {
++      boost::asio::post(*m_worker, [process_reply]() {
+         process_reply->complete(true);
+       });
+     } else {
+diff --git a/src/tools/immutable_object_cache/CacheClient.h b/src/tools/immutable_object_cache/CacheClient.h
+index 7dc4aa76c1324..5122e0906b91b 100644
+--- a/src/tools/immutable_object_cache/CacheClient.h
++++ b/src/tools/immutable_object_cache/CacheClient.h
+@@ -5,6 +5,7 @@
+ #define CEPH_CACHE_CACHE_CLIENT_H
+ 
+ #include <atomic>
++#include <boost/asio/executor_work_guard.hpp>
+ #include <boost/asio/io_context.hpp>
+ #include <boost/asio/local/stream_protocol.hpp>
+ #include <boost/algorithm/string.hpp>
+@@ -58,7 +59,7 @@ class CacheClient {
+  private:
+   CephContext* m_cct;
+   boost::asio::io_context m_io_service;
+-  boost::asio::io_context::work m_io_service_work;
++  boost::asio::executor_work_guard<boost::asio::io_context::executor_type> m_io_service_work;
+   stream_protocol::socket m_dm_socket;
+   stream_protocol::endpoint m_ep;
+   std::shared_ptr<std::thread> m_io_thread;
+@@ -67,7 +68,7 @@ class CacheClient {
+   uint64_t m_worker_thread_num;
+   boost::asio::io_context* m_worker;
+   std::vector<std::thread*> m_worker_threads;
+-  boost::asio::io_context::work* m_worker_io_service_work;
++  boost::asio::executor_work_guard<boost::asio::io_context::executor_type>* m_worker_io_service_work;
+ 
+   std::atomic<bool> m_writing;
+   std::atomic<bool> m_reading;
+diff --git a/src/tools/immutable_object_cache/CacheServer.cc b/src/tools/immutable_object_cache/CacheServer.cc
+index 14deddce561b3..a4c4e3bc36ce1 100644
+--- a/src/tools/immutable_object_cache/CacheServer.cc
++++ b/src/tools/immutable_object_cache/CacheServer.cc
+@@ -35,10 +35,10 @@ int CacheServer::run() {
+     return ret;
+   }
+ 
+-  boost::system::error_code ec;
+-  ret = m_io_service.run(ec);
+-  if (ec) {
+-    ldout(cct, 1) << "m_io_service run fails: " << ec.message() << dendl;
++  try {
++    ret = m_io_service.run();
++  } catch (const std::exception& e) {
++    ldout(cct, 1) << "m_io_service run fails: " << e.what() << dendl;
+     return -1;
+   }
+   return 0;
+@@ -66,7 +66,7 @@ int CacheServer::start_accept() {
+     return -ec.value();
+   }
+ 
+-  m_acceptor.listen(boost::asio::socket_base::max_connections, ec);
++  m_acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
+   if (ec) {
+     lderr(cct) << "failed to listen on domain socket: " << ec.message()
+                << dendl;
+From 8a04d36cb4738f88c0d60cf0bc83ce052ee3594d Mon Sep 17 00:00:00 2001
+From: Adam Emerson <aemerson@redhat.com>
+Date: Thu, 12 Dec 2024 16:11:32 -0500
+Subject: [PATCH] test/neorados: Use `asio::post` free function
+
+Signed-off-by: Adam Emerson <aemerson@redhat.com>
+---
+ src/test/neorados/completions.cc | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/test/neorados/completions.cc b/src/test/neorados/completions.cc
+index b6286130bbea0..a4684e4dc51c5 100644
+--- a/src/test/neorados/completions.cc
++++ b/src/test/neorados/completions.cc
+@@ -1,4 +1,5 @@
+ #include <boost/asio/io_context.hpp>
++#include <boost/asio/post.hpp>
+ 
+ constexpr int max_completions = 10'000'000;
+ int completed = 0;
+@@ -7,11 +8,11 @@ boost::asio::io_context c;
+ 
+ void nested_cb() {
+   if (++completed < max_completions)
+-    c.post(&nested_cb);
++    boost::asio::post(c, &nested_cb);
+ }
+ 
+ int main(void) {
+-  c.post(&nested_cb);
++  boost::asio::post(c, &nested_cb);
+   c.run();
+   assert(completed == max_completions);
+   return 0;
+From 8e5e07659f92a416039cb1153b1c45970a2ee42a Mon Sep 17 00:00:00 2001
+From: Adam Emerson <aemerson@redhat.com>
+Date: Fri, 13 Dec 2024 15:22:22 -0500
+Subject: [PATCH] exporter: Asio deprecations
+
+Signed-off-by: Adam Emerson <aemerson@redhat.com>
+---
+ src/exporter/DaemonMetricCollector.cc | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/exporter/DaemonMetricCollector.cc b/src/exporter/DaemonMetricCollector.cc
+index d27b3ac43c59c..80cdf24458618 100644
+--- a/src/exporter/DaemonMetricCollector.cc
++++ b/src/exporter/DaemonMetricCollector.cc
+@@ -48,7 +48,7 @@ void DaemonMetricCollector::request_loop() {
+     dump_asok_metrics(false, -1, true, dump_response, schema_response, true);
+     auto stats_period = g_conf().get_val<int64_t>("exporter_stats_period");
+     // time to wait before sending requests again
+-    timer.expires_from_now(std::chrono::seconds(stats_period));
++    timer.expires_after(std::chrono::seconds(stats_period));
+     request_loop(timer);
+   });
+ }
+From f4ac2f80851628318190685d2041b0e04e066333 Mon Sep 17 00:00:00 2001
+From: Adam Emerson <aemerson@redhat.com>
+Date: Fri, 13 Dec 2024 15:22:12 -0500
+Subject: [PATCH] rgw: Asio deprecations
+
+Signed-off-by: Adam Emerson <aemerson@redhat.com>
+---
+ src/rgw/driver/rados/rgw_notify.cc | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/src/rgw/driver/rados/rgw_notify.cc b/src/rgw/driver/rados/rgw_notify.cc
+index 5734284d1a364..14eeb73dac26b 100644
+--- a/src/rgw/driver/rados/rgw_notify.cc
++++ b/src/rgw/driver/rados/rgw_notify.cc
+@@ -178,7 +178,7 @@ class Manager : public DoutPrefixProvider {
+       if (pending_tokens == 0) {
+         return;
+       }
+-      timer.expires_from_now(infinite_duration);
++      timer.expires_after(infinite_duration);
+       boost::system::error_code ec; 
+       timer.async_wait(yield[ec]);
+       ceph_assert(ec == boost::system::errc::operation_canceled);
+@@ -297,7 +297,7 @@ class Manager : public DoutPrefixProvider {
+           << ". error: " << ret << dendl;
+       }
+       Timer timer(io_context);
+-      timer.expires_from_now(std::chrono::seconds(reservations_cleanup_period_s));
++      timer.expires_after(std::chrono::seconds(reservations_cleanup_period_s));
+       boost::system::error_code ec;
+ 	    timer.async_wait(yield[ec]);
+     }
+@@ -380,7 +380,7 @@ class Manager : public DoutPrefixProvider {
+       // if queue was empty the last time, sleep for idle timeout
+       if (is_idle) {
+         Timer timer(io_context);
+-        timer.expires_from_now(std::chrono::microseconds(queue_idle_sleep_us));
++        timer.expires_after(std::chrono::microseconds(queue_idle_sleep_us));
+         boost::system::error_code ec;
+ 	      timer.async_wait(yield[ec]);
+       }
+@@ -657,7 +657,7 @@ class Manager : public DoutPrefixProvider {
+       const auto duration = (has_error ? 
+         std::chrono::milliseconds(queues_update_retry_ms) : std::chrono::milliseconds(queues_update_period_ms)) + 
+         std::chrono::milliseconds(duration_jitter(rnd_gen));
+-      timer.expires_from_now(duration);
++      timer.expires_after(duration);
+       const auto tp = ceph::coarse_real_time::clock::to_time_t(ceph::coarse_real_time::clock::now() + duration);
+       ldpp_dout(this, 20) << "INFO: next queues processing will happen at: " << std::ctime(&tp)  << dendl;
+       boost::system::error_code ec;
+@@ -743,7 +743,7 @@ class Manager : public DoutPrefixProvider {
+     Timer timer(io_context);
+     while (processed_queue_count > 0) {
+       ldpp_dout(this, 5) << "INFO: manager stopped. " << processed_queue_count << " queues are still being processed" << dendl;
+-      timer.expires_from_now(std::chrono::milliseconds(queues_update_retry_ms));
++      timer.expires_after(std::chrono::milliseconds(queues_update_retry_ms));
+       boost::system::error_code ec;
+       timer.async_wait(yield[ec]);
+     }
+From 857eedbe6c9ed80ed0625bd0aa27b1a1e85f8d59 Mon Sep 17 00:00:00 2001
+From: Adam Emerson <aemerson@redhat.com>
+Date: Mon, 20 May 2024 16:22:28 -0400
+Subject: [PATCH] mds: Use Boost::url rather than `src.hpp`
+
+As `src.hpp` is no longer supported.
+
+Signed-off-by: Adam Emerson <aemerson@redhat.com>
+---
+ CMakeLists.txt              | 2 +-
+ src/mds/BoostUrlImpl.cc     | 8 --------
+ src/mds/CMakeLists.txt      | 3 +--
+ src/test/mds/CMakeLists.txt | 3 +--
+ 4 files changed, 3 insertions(+), 13 deletions(-)
+ delete mode 100644 src/mds/BoostUrlImpl.cc
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ba5798e0be9fe..33cd2d81370c8 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -700,7 +700,7 @@ option(WITH_SYSTEM_BOOST "require and build with system Boost" OFF)
+ # Boost::thread depends on Boost::atomic, so list it explicitly.
+ set(BOOST_COMPONENTS
+   atomic chrono thread system regex random program_options date_time
+-  iostreams context coroutine)
++  iostreams context coroutine url)
+ set(BOOST_HEADER_COMPONENTS container)
+ 
+ if(WITH_MGR)
+diff --git a/src/mds/BoostUrlImpl.cc b/src/mds/BoostUrlImpl.cc
+deleted file mode 100644
+index 479f4c6d75d0d..0000000000000
+--- a/src/mds/BoostUrlImpl.cc
++++ /dev/null
+@@ -1,8 +0,0 @@
+-/*
+- * https://www.boost.org/doc/libs/1_82_0/libs/url/doc/html/url/overview.html#url.overview.requirements
+- *
+- * To use the library as header-only; that is, to eliminate the requirement 
+- * to link a program to a static or dynamic Boost.URL library, 
+- * simply place the following line in exactly one source file in your project.
+- */
+-#include <boost/url/src.hpp>
+diff --git a/src/mds/CMakeLists.txt b/src/mds/CMakeLists.txt
+index ffa9dc28d8a69..f3980c7e04b50 100644
+--- a/src/mds/CMakeLists.txt
++++ b/src/mds/CMakeLists.txt
+@@ -45,7 +45,6 @@ set(mds_srcs
+   QuiesceDbManager.cc
+   QuiesceAgent.cc
+   MDSRankQuiesce.cc
+-  BoostUrlImpl.cc
+   ${CMAKE_SOURCE_DIR}/src/common/TrackedOp.cc
+   ${CMAKE_SOURCE_DIR}/src/common/MemoryModel.cc
+   ${CMAKE_SOURCE_DIR}/src/osdc/Journaler.cc
+@@ -51,5 +51,5 @@
+   ${CMAKE_SOURCE_DIR}/src/mgr/MDSPerfMetricTypes.cc)
+ add_library(mds STATIC ${mds_srcs})
+ target_link_libraries(mds PRIVATE
+-  heap_profiler cpu_profiler osdc ${LUA_LIBRARIES})
++  Boost::url heap_profiler cpu_profiler osdc ${LUA_LIBRARIES})
+ target_include_directories(mds PRIVATE "${LUA_INCLUDE_DIR}")
+diff --git a/src/test/mds/CMakeLists.txt b/src/test/mds/CMakeLists.txt
+index f80abe75083f1..18ebb648e680c 100644
+--- a/src/test/mds/CMakeLists.txt
++++ b/src/test/mds/CMakeLists.txt
+@@ -18,11 +18,10 @@ target_link_libraries(unittest_mds_sessionfilter mds osdc ceph-common global ${B
+ add_executable(unittest_mds_quiesce_db
+   TestQuiesceDb.cc
+   ../../../src/mds/QuiesceDbManager.cc
+-  ../../../src/mds/BoostUrlImpl.cc
+   $<TARGET_OBJECTS:unit-main>
+ )
+ add_ceph_unittest(unittest_mds_quiesce_db)
+-target_link_libraries(unittest_mds_quiesce_db ceph-common global)
++target_link_libraries(unittest_mds_quiesce_db ceph-common global Boost::url)
+ 
+ # unittest_mds_quiesce_agent
+ add_executable(unittest_mds_quiesce_agent

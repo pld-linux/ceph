@@ -17,9 +17,6 @@
 %bcond_with	angular		# Angular-based mgr/dashboard frontend (built using npm, too outdated currently)
 %bcond_without	bluefs		# BlueFS library
 %bcond_with	dpdk		# DPDK messaging
-# 15.2.x/16.2.x build fails with:
-# src/rgw/rgw_fcgi_process.cc:92:53: error: 'class rgw::sal::RGWRadosStore' has no member named 'get_new_req_id'
-%bcond_with	fcgi		# RADOS Gateway FCGI frontend
 %bcond_with	fio		# FIO engines support (16.x: downloads fio as internal subproject)
 %bcond_with	jaeger		# jaegertracing support (NFY, BR: thrift >= 0.13)
 %bcond_with	kerberos	# GSSAPI/KRB5 support
@@ -53,14 +50,14 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	18.2.4
+Version:	19.2.0
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	28ab44c5c5a05786ec02b25ae5300b2b
-Source1:	ceph.sysconfig
-Source3:	ceph.tmpfiles
+# Source0-md5:	876d7144df5c7061ddbd5bc5c3709a35
+Source1:	%{name}.sysconfig
+Source3:	%{name}.tmpfiles
 Patch0:		%{name}-python.patch
 Patch1:		%{name}-fio.patch
 Patch2:		%{name}-cmake-static.patch
@@ -71,19 +68,12 @@ Patch6:		types.patch
 Patch7:		use-provided-cpu-flag-values.patch
 Patch8:		ix86-no-asm.patch
 Patch9:		long-int-time_t.patch
-Patch10:	%{name}-qat.patch
-Patch11:	%{name}-liburing.patch
-Patch12:	%{name}-glibc.patch
-Patch13:	%{name}-libfmt.patch
-Patch14:	%{name}-system-rocksdb.patch
-# https://src.fedoraproject.org/rpms/ceph/blob/rawhide/f/0017-gcc-12-omnibus.patch
-Patch15:	%{name}-gcc12.patch
+Patch10:	%{name}-system-rocksdb.patch
 # https://src.fedoraproject.org/rpms/ceph/blob/rawhide/f/0020-src-arrow-cpp-cmake_modules-ThirdpartyToolchain.cmake.patch
-Patch16:	%{name}-system-xsimd.patch
-Patch17:	boost1.81.patch
-Patch18:	%{name}-gcc14.patch
-Patch19:	%{name}-gcc14-2.patch
-Patch20:	%{name}-arrow-re2.patch
+Patch11:	%{name}-system-xsimd.patch
+Patch12:	%{name}-gcc14.patch
+Patch13:	boost-1.86.patch
+Patch14:	boost-1.87.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -100,7 +90,6 @@ BuildRequires:	dpdk-devel
 %endif
 BuildRequires:	doxygen
 BuildRequires:	expat-devel >= 1.95
-%{?with_fcgi:BuildRequires:	fcgi-devel}
 %{?with_fio:BuildRequires:	fio-devel >= 3.15}
 BuildRequires:	gdbm-devel
 %{?with_seastar:BuildRequires:	gnutls-devel >= 3.3.26}
@@ -156,12 +145,12 @@ BuildRequires:	python3-PyYAML
 BuildRequires:	python3-devel >= 1:3.6.0
 BuildRequires:	python3-modules >= 1:3.6.0
 %{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
+%{?with_qat:BuildRequires:	qatlib-devel}
 BuildRequires:	rabbitmq-c-devel
 %{?with_seastar:BuildRequires:	ragel >= 6.10}
 BuildRequires:	re2-devel
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.14}
 BuildRequires:	rpmbuild(macros) >= 2.021
-%{?with_qat:BuildRequires:	qatlib-devel}
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
 BuildRequires:	sphinx-pdg >= 4.4.0
@@ -169,8 +158,8 @@ BuildRequires:	sqlite3-devel >= 3
 # >= 0.13.0 wanted, but seems to build with 0.11.0 when jaeger is disabled
 BuildRequires:	thrift-devel
 BuildRequires:	udev-devel
-%{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
 BuildRequires:	xfsprogs-devel
+%{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
 BuildRequires:	xsimd-devel
 %{?with_seastar:BuildRequires:	yaml-cpp-devel >= 0.5.1}
 %ifarch %{x8664}
@@ -224,14 +213,13 @@ Requires:	%{name}-libs = %{version}-%{release}
 Requires:	boost-devel >= 1.79
 Requires:	curl-devel >= 7.32
 Requires:	expat-devel >= 1.95
-Requires:	fcgi-devel
-Requires:	nss-devel >= 3
 Requires:	leveldb-devel >= 1.23-2
 Requires:	libatomic_ops
 Requires:	libblkid-devel >= 2.17
 Requires:	libstdc++-devel >= 6:11
 Requires:	libuuid-devel
-%{?with_lttng:Requires:	lttng-ust-devel}
+%{?with_lttng:Requires: lttng-ust-devel}
+Requires:	nss-devel >= 3
 Requires:	openldap-devel
 Obsoletes:	ceph-static < 12
 
@@ -341,29 +329,23 @@ uruchamiania demonów.
 
 %prep
 %setup -q
-%patch0 -p1
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
+%patch -P 0 -p1
+%patch -P 1 -p1
+%patch -P 2 -p1
+%patch -P 3 -p1
+%patch -P 4 -p1
+%patch -P 5 -p1
+%patch -P 6 -p1
+%patch -P 7 -p1
+%patch -P 8 -p1
 %ifarch %{ix86}
-%patch9 -p1
+%patch -P 9 -p1
 %endif
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
+%patch -P 10 -p1
+%patch -P 11 -p1
+%patch -P 12 -p1
+%patch -P 13 -p1
+%patch -P 14 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
@@ -420,7 +402,8 @@ cd build
 	%{!?with_angular:-DWITH_MGR_DASHBOARD_FRONTEND=OFF} \
 	-DWITH_OCF=ON \
 	-DWITH_PYTHON3=%{py3_ver} \
-	%{?with_fcgi:-DWITH_RADOSGW_FCGI_FRONTEND=ON} \
+	-DWITH_RADOSGW_SELECT_PARQUET=OFF \
+	-DWITH_RADOSGW_ARROW_FLIGHT=OFF \
 	%{!?with_rdma:-DWITH_RDMA=OFF} \
 	-DWITH_REENTRANT_STRSIGNAL=ON \
 	%{?with_qat:-DWITH_QAT=ON} \
@@ -512,7 +495,6 @@ fi
 %{systemdunitdir}/ceph.service
 %{systemdunitdir}/ceph.target
 %{systemdunitdir}/ceph-crash.service
-%{systemdunitdir}/ceph-exporter.service
 %{systemdunitdir}/ceph-fuse.target
 %{systemdunitdir}/ceph-fuse@.service
 %{systemdunitdir}/ceph-immutable-object-cache.target
@@ -704,6 +686,7 @@ fi
 %{_mandir}/man8/rbd-replay-prep.8*
 %{_mandir}/man8/rbdmap.8*
 %{_mandir}/man8/rgw-orphan-list.8*
+%{_mandir}/man8/rgw-restore-bucket-index.8*
 
 %dir %{_localstatedir}/lib/ceph
 %dir %{_localstatedir}/lib/ceph/bootstrap-mds
@@ -726,6 +709,8 @@ fi
 %endif
 %attr(755,root,root) %{_libdir}/libcephfs.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libcephfs.so.2
+%attr(755,root,root) %{_libdir}/libmgr_op_tp.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libmgr_op_tp.so.1
 %attr(755,root,root) %{_libdir}/libos_tp.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libos_tp.so.1
 %attr(755,root,root) %{_libdir}/libosd_tp.so.*.*.*
@@ -753,6 +738,7 @@ fi
 %files devel
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libcephfs.so
+%attr(755,root,root) %{_libdir}/libmgr_op_tp.so
 %attr(755,root,root) %{_libdir}/libos_tp.so
 %attr(755,root,root) %{_libdir}/libosd_tp.so
 %attr(755,root,root) %{_libdir}/librados.so
