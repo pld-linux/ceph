@@ -1,0 +1,14 @@
+--- ceph-19.2.0/src/include/utime.h.orig	2024-09-18 18:27:51.000000000 +0200
++++ ceph-19.2.0/src/include/utime.h	2024-12-22 12:49:17.783333334 +0100
+@@ -64,7 +64,11 @@
+   }
+ 
+   static inline constexpr utime_t max() {
++#if !defined(__x86_64__)
++    return utime_t{time_t{std::numeric_limits<int32_t>::max()}, 999'999'999ul};
++#else
+     return utime_t{time_t{std::numeric_limits<uint32_t>::max()}, 999'999'999ul};
++#endif
+   }
+ 
+   // cons
