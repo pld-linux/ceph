@@ -38,6 +38,10 @@
 %ifarch x32
 %undefine	with_tcmalloc
 %endif
+%ifnarch %{x8664}
+%undefine	with_qat
+%undefine	with_qatzip
+%endif
 %ifnarch %{x8664} aarch64
 %undefine	with_pmem
 %endif
@@ -144,6 +148,8 @@ BuildRequires:	python3 >= 1:3.6.0
 BuildRequires:	python3-Cython
 BuildRequires:	python3-PyYAML
 BuildRequires:	python3-devel >= 1:3.6.0
+BuildRequires:	python3-jinja2 >= 3.1.2
+BuildRequires:	python3-markupsafe >= 2.1.3
 BuildRequires:	python3-modules >= 1:3.6.0
 %{?with_tests:BuildRequires:	python3-tox >= 2.9.1}
 %{?with_qat:BuildRequires:	qatlib-devel}
@@ -383,43 +389,43 @@ cd build
 %endif
 	-DALLOCATOR="%{?with_tcmalloc:tcmalloc}%{!?with_tcmalloc:libc}" \
 	-DFIO_INCLUDE_DIR=/usr/include/fio \
-	%{?with_java:-DJAVA_HOME:PATH=%{java_home}} \
+	%{cmake_on_off java JAVA_HOME:PATH} \
 	-DLUA_INCLUDE_DIR=%{_includedir}/lua \
 	-DPYTHON=%{__python3} \
 	-DSPHINX_BUILD=/usr/bin/sphinx-build \
-	%{!?with_babeltrace:-DWITH_BABELTRACE=OFF} \
-	%{?with_bluefs:-DWITH_BLUEFS=ON} \
 %if %{with pmem}
 	-DWITH_BLUESTORE_PMEM=ON \
 	-DWITH_SYSTEM_PMDK:BOOL=ON \
 %endif
-	%{?with_java:-DWITH_CEPHFS_JAVA=ON} \
-	%{?with_dpdk:-DWITH_DPDK=ON} \
-	%{?with_fio:-DWITH_FIO=ON} \
-	%{?with_kerberos:-DWITH_GSSAPI=ON} \
-	%{!?with_jaeger:-DWITH_JAEGER=OFF} \
-	%{!?with_lttng:-DWITH_LTTNG=OFF} \
 	-DWITH_LZ4=ON \
-	%{!?with_angular:-DWITH_MGR_DASHBOARD_FRONTEND=OFF} \
 	-DWITH_OCF=ON \
 	-DWITH_PYTHON3=%{py3_ver} \
 	-DWITH_RADOSGW_SELECT_PARQUET=OFF \
 	-DWITH_RADOSGW_ARROW_FLIGHT=OFF \
-	%{!?with_rdma:-DWITH_RDMA=OFF} \
 	-DWITH_REENTRANT_STRSIGNAL=ON \
-	%{?with_qat:-DWITH_QAT=ON} \
-	%{?with_qatzip:-DWITH_QATZIP=ON} \
-	%{?with_seastar:-DWITH_SEASTAR=ON} \
-	%{?with_spdk:-DWITH_SPDK=ON} \
 	-DWITH_SYSTEM_BOOST=ON \
 	-DWITH_SYSTEM_LIBURING=ON \
-	%{?with_angular:-DWITH_SYSTEM_NPM=ON} \
-	%{?with_system_rocksdb:-DWITH_SYSTEM_ROCKSDB=ON} \
 	-DWITH_SYSTEM_ZSTD=ON \
 	-DWITH_SYSTEMD=ON \
-	%{!?with_tests:-DWITH_TESTS=OFF} \
-	%{?with_zbd:-DWITH_ZBD=ON} \
-	%{?with_zfs:-DWITH_ZFS=ON}
+	%{cmake_on_off babeltrace WITH_BABELTRACE} \
+	%{cmake_on_off bluefs WITH_BLUEFS} \
+	%{cmake_on_off java WITH_CEPHFS_JAVA} \
+	%{cmake_on_off dpdk WITH_DPDK} \
+	%{cmake_on_off fio WITH_FIO} \
+	%{cmake_on_off kerberos WITH_GSSAPI} \
+	%{cmake_on_off jaeger WITH_JAEGER} \
+	%{cmake_on_off lttng WITH_LTTNG} \
+	%{cmake_on_off angular WITH_MGR_DASHBOARD_FRONTEND} \
+	%{cmake_on_off rdma WITH_RDMA} \
+	%{cmake_on_off qat WITH_QATLIB} \
+	%{cmake_on_off qatzip WITH_QATZIP} \
+	%{cmake_on_off seastar WITH_SEASTAR} \
+	%{cmake_on_off spdk WITH_SPDK} \
+	%{cmake_on_off angular WITH_SYSTEM_NPM} \
+	%{cmake_on_off system_rocksdb WITH_SYSTEM_ROCKSDB} \
+	%{cmake_on_off tests WITH_TESTS} \
+	%{cmake_on_off zbd WITH_ZBD} \
+	%{cmake_on_off zfs WITH_ZFS}
 
 # some object files have missing dependencies on these, pregenerate to avoid global -j1
 %{__make} legacy-option-headers
