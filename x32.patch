@@ -19,11 +19,11 @@
    
 -  CLS_LOG(20, "INFO: init_queue_op queue actual size %lu", head.queue_size);
 -  CLS_LOG(20, "INFO: init_queue_op head size %lu", head.max_head_size);
-+  CLS_LOG(20, "INFO: init_queue_op queue actual size "LONG_FORMAT"", head.queue_size);
-+  CLS_LOG(20, "INFO: init_queue_op head size "LONG_FORMAT"", head.max_head_size);
++  CLS_LOG(20, "INFO: init_queue_op queue actual size " LONG_FORMAT, head.queue_size);
++  CLS_LOG(20, "INFO: init_queue_op head size " LONG_FORMAT, head.max_head_size);
    CLS_LOG(20, "INFO: init_queue_op queue front offset %s", head.front.to_str().c_str());
 -  CLS_LOG(20, "INFO: init_queue_op queue max urgent data size %lu", head.max_urgent_data_size);
-+  CLS_LOG(20, "INFO: init_queue_op queue max urgent data size "LONG_FORMAT"", head.max_urgent_data_size);
++  CLS_LOG(20, "INFO: init_queue_op queue max urgent data size " LONG_FORMAT, head.max_urgent_data_size);
  
    return queue_write_head(hctx, head);
  }
@@ -32,7 +32,7 @@
    op_ret.queue_capacity = head.queue_size - head.max_head_size;
  
 -  CLS_LOG(20, "INFO: queue_get_capacity: size of queue is %lu", op_ret.queue_capacity);
-+  CLS_LOG(20, "INFO: queue_get_capacity: size of queue is "LONG_FORMAT"", op_ret.queue_capacity);
++  CLS_LOG(20, "INFO: queue_get_capacity: size of queue is " LONG_FORMAT, op_ret.queue_capacity);
  
    return 0;
  }
@@ -41,7 +41,7 @@
      bl.claim_append(bl_data);
    
 -    CLS_LOG(10, "INFO: queue_enqueue(): Total size to be written is %u and data size is %lu", bl.length(), data_size);
-+    CLS_LOG(10, "INFO: queue_enqueue(): Total size to be written is %u and data size is "LONG_FORMAT"", bl.length(), data_size);
++    CLS_LOG(10, "INFO: queue_enqueue(): Total size to be written is %u and data size is " LONG_FORMAT, bl.length(), data_size);
  
      if (head.tail.offset >= head.front.offset) {
        // check if data can fit in the remaining space in queue
@@ -50,13 +50,13 @@
    do
    {
 -    CLS_LOG(10, "INFO: queue_list_entries(): start_offset is %lu", start_offset);
-+    CLS_LOG(10, "INFO: queue_list_entries(): start_offset is "LONG_FORMAT"", start_offset);
++    CLS_LOG(10, "INFO: queue_list_entries(): start_offset is " LONG_FORMAT, start_offset);
    
      bufferlist bl_chunk;
      //Read chunk size at a time, if it is less than contiguous data size, else read contiguous data size
      size_to_read = std::min(contiguous_data_size, large_chunk_size);
 -    CLS_LOG(10, "INFO: queue_list_entries(): size_to_read is %lu", size_to_read);
-+    CLS_LOG(10, "INFO: queue_list_entries(): size_to_read is "LONG_FORMAT"", size_to_read);
++    CLS_LOG(10, "INFO: queue_list_entries(): size_to_read is " LONG_FORMAT, size_to_read);
      if (size_to_read == 0) {
        next_marker = head.tail;
        op_ret.is_truncated = false;
@@ -65,7 +65,7 @@
      //If there is leftover data from previous iteration, append new data to leftover data
      uint64_t entry_start_offset = start_offset - bl.length();
 -    CLS_LOG(20, "INFO: queue_list_entries(): Entry start offset accounting for leftover data is %lu", entry_start_offset);
-+    CLS_LOG(20, "INFO: queue_list_entries(): Entry start offset accounting for leftover data is "LONG_FORMAT"", entry_start_offset);
++    CLS_LOG(20, "INFO: queue_list_entries(): Entry start offset accounting for leftover data is " LONG_FORMAT, entry_start_offset);
      bl.claim_append(bl_chunk);
      bl_chunk = std::move(bl);
  
@@ -74,7 +74,7 @@
      uint64_t size_to_process = bl_chunk.length();
      do {
 -      CLS_LOG(10, "INFO: queue_list_entries(): index: %u, size_to_process: %lu", index, size_to_process);
-+      CLS_LOG(10, "INFO: queue_list_entries(): index: %u, size_to_process: "LONG_FORMAT"", index, size_to_process);
++      CLS_LOG(10, "INFO: queue_list_entries(): index: %u, size_to_process: " LONG_FORMAT, index, size_to_process);
        cls_queue_entry entry;
        ceph_assert(it.get_off() == index);
        //Use the last marker saved in previous iteration as the marker for this entry
@@ -83,7 +83,7 @@
            break;
          }
 -        CLS_LOG(20, "INFO: queue_list_entries(): data size: %lu", data_size);
-+        CLS_LOG(20, "INFO: queue_list_entries(): data size: "LONG_FORMAT"", data_size);
++        CLS_LOG(20, "INFO: queue_list_entries(): data size: " LONG_FORMAT, data_size);
          index += sizeof(uint64_t);
          size_to_process -= sizeof(uint64_t);
        }
@@ -101,7 +101,7 @@
        }
        CLS_LOG(10, "INFO: queue_list_entries(): either num_ops is same as op.max or last_marker is same as op.end_marker, "
 -                  "hence breaking out from outer loop with next offset: %lu", next_marker.offset);
-+                  "hence breaking out from outer loop with next offset: "LONG_FORMAT"", next_marker.offset);
++                  "hence breaking out from outer loop with next offset: " LONG_FORMAT, next_marker.offset);
        break;
      }
  
@@ -110,7 +110,7 @@
        if (ret < 0) {
          CLS_LOG(5, "INFO: queue_remove_entries: Failed to zero out entries");
 -        CLS_LOG(10, "INFO: queue_remove_entries: Start offset = %lu", head.max_head_size);
-+        CLS_LOG(10, "INFO: queue_remove_entries: Start offset = "LONG_FORMAT"", head.max_head_size);
++        CLS_LOG(10, "INFO: queue_remove_entries: Start offset = " LONG_FORMAT, head.max_head_size);
          return ret;
        }
      }
@@ -118,7 +118,7 @@
      //no-op
    } else {
 -    CLS_LOG(0, "INFO: queue_remove_entries: Invalid end marker: offset = %s, gen = %lu", end_marker.to_str().c_str(), end_marker.gen);
-+    CLS_LOG(0, "INFO: queue_remove_entries: Invalid end marker: offset = %s, gen = "LONG_FORMAT"", end_marker.to_str().c_str(), end_marker.gen);
++    CLS_LOG(0, "INFO: queue_remove_entries: Invalid end marker: offset = %s, gen = " LONG_FORMAT, end_marker.to_str().c_str(), end_marker.gen);
      return -EINVAL;
    }
  
