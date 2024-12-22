@@ -78,6 +78,7 @@ Patch11:	%{name}-system-xsimd.patch
 Patch12:	%{name}-gcc14.patch
 Patch13:	boost-1.86.patch
 Patch14:	boost-1.87.patch
+Patch15:	x32.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -353,6 +354,7 @@ uruchamiania demonów.
 %patch -P 12 -p1
 %patch -P 13 -p1
 %patch -P 14 -p1
+%patch -P 15 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
