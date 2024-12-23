@@ -55,7 +55,7 @@ Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	19.2.0
-Release:	1
+Release:	2
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
@@ -81,6 +81,7 @@ Patch14:	boost-1.87.patch
 Patch15:	x32.patch
 Patch16:	ix86.patch
 Patch17:	no-python-deps.patch
+Patch18:	install-cpp_redis.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -361,6 +362,7 @@ uruchamiania demonów.
 %patch -P 15 -p1
 %patch -P 16 -p1
 %patch -P 17 -p1
+%patch -P 18 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
@@ -592,6 +594,8 @@ fi
 %endif
 %{_libexecdir}/ceph/ceph_common.sh
 %attr(755,root,root) %{_libexecdir}/ceph/ceph-osd-prestart.sh
+%attr(755,root,root) %{_libdir}/ceph/libcpp_redis.so
+%attr(755,root,root) %{_libdir}/ceph/libtacopie.so
 %dir %{_libdir}/ceph/compressor
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_lz4.so*
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_snappy.so*
