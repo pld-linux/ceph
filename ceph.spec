@@ -75,7 +75,7 @@ Patch9:		long-int-time_t.patch
 Patch10:	%{name}-system-rocksdb.patch
 # https://src.fedoraproject.org/rpms/ceph/blob/rawhide/f/0020-src-arrow-cpp-cmake_modules-ThirdpartyToolchain.cmake.patch
 Patch11:	%{name}-system-xsimd.patch
-
+Patch12:	0041-src-mgr-PyModule.cc.patch
 Patch13:	boost-1.86.patch
 Patch14:	boost-1.87.patch
 Patch15:	x32.patch
@@ -356,7 +356,7 @@ uruchamiania demonów.
 %endif
 %patch -P 10 -p1
 %patch -P 11 -p1
-
+%patch -P 12 -p1
 %patch -P 13 -p1
 %patch -P 14 -p1
 %patch -P 15 -p1
