@@ -656,7 +656,6 @@ fi
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_rgw_gc.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_sdk.so*
-%attr(755,root,root) %{_libdir}/rados-classes/libcls_test_remote_reads.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_timeindex.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_user.so*
 %attr(755,root,root) %{_libdir}/rados-classes/libcls_version.so*
