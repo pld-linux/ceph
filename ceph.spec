@@ -54,12 +54,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	19.2.0
-Release:	6
+Version:	19.2.1
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	876d7144df5c7061ddbd5bc5c3709a35
+# Source0-md5:	a9647a5303269e1389c8b0ad28beaa5c
 Source1:	%{name}.sysconfig
 Source3:	%{name}.tmpfiles
 Patch0:		%{name}-python.patch
@@ -75,7 +75,7 @@ Patch9:		long-int-time_t.patch
 Patch10:	%{name}-system-rocksdb.patch
 # https://src.fedoraproject.org/rpms/ceph/blob/rawhide/f/0020-src-arrow-cpp-cmake_modules-ThirdpartyToolchain.cmake.patch
 Patch11:	%{name}-system-xsimd.patch
-Patch12:	%{name}-gcc14.patch
+
 Patch13:	boost-1.86.patch
 Patch14:	boost-1.87.patch
 Patch15:	x32.patch
@@ -356,7 +356,7 @@ uruchamiania demonów.
 %endif
 %patch -P 10 -p1
 %patch -P 11 -p1
-%patch -P 12 -p1
+
 %patch -P 13 -p1
 %patch -P 14 -p1
 %patch -P 15 -p1
@@ -594,7 +594,6 @@ fi
 %endif
 %{_libexecdir}/ceph/ceph_common.sh
 %attr(755,root,root) %{_libexecdir}/ceph/ceph-osd-prestart.sh
-%attr(755,root,root) %{_libdir}/ceph/libcpp_redis.so
 %attr(755,root,root) %{_libdir}/ceph/libtacopie.so
 %dir %{_libdir}/ceph/compressor
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_lz4.so*
@@ -752,6 +751,8 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librgw_rados_tp.so.2
 %attr(755,root,root) %{_libdir}/libcephsqlite.so
 %dir %{_libdir}/ceph
+# needed by librgw.so.*
+%attr(755,root,root) %{_libdir}/ceph/libcpp_redis.so
 %attr(755,root,root) %{_libdir}/ceph/libceph-common.so.2
 
 %files devel
