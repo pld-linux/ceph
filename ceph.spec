@@ -55,7 +55,7 @@ Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
 Version:	19.2.1
-Release:	1
+Release:	2
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
@@ -594,7 +594,6 @@ fi
 %endif
 %{_libexecdir}/ceph/ceph_common.sh
 %attr(755,root,root) %{_libexecdir}/ceph/ceph-osd-prestart.sh
-%attr(755,root,root) %{_libdir}/ceph/libtacopie.so
 %dir %{_libdir}/ceph/compressor
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_lz4.so*
 %attr(755,root,root) %{_libdir}/ceph/compressor/libceph_snappy.so*
@@ -750,6 +749,7 @@ fi
 %attr(755,root,root) %ghost %{_libdir}/librgw_rados_tp.so.2
 %attr(755,root,root) %{_libdir}/libcephsqlite.so
 %dir %{_libdir}/ceph
+%attr(755,root,root) %{_libdir}/ceph/libtacopie.so
 # needed by librgw.so.*
 %attr(755,root,root) %{_libdir}/ceph/libcpp_redis.so
 %attr(755,root,root) %{_libdir}/ceph/libceph-common.so.2
