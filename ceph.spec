@@ -27,7 +27,6 @@
 %bcond_with	seastar		# seastar components (64-bit pointers required)
 %bcond_with	spdk		# Ceph SPDK support (DPDK based)
 %bcond_without	system_rocksdb	# system RocksDB storage support
-%bcond_without	zbd		# ZBD bluestore backend
 # 15.2.x/16.2.x: "fallthrough" define from OpenZFS's spl breaks "[[fallthrough]]" in src/include/blobhash.h
 %bcond_with	zfs		# ZFS support [not ready for zfs 0.8.x]
 %bcond_without	lttng		# LTTng tracing
@@ -54,12 +53,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	19.2.1
-Release:	2
+Version:	19.2.2
+Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	a9647a5303269e1389c8b0ad28beaa5c
+# Source0-md5:	7c76143f9acf7be367559a2376cc646d
 Source1:	%{name}.sysconfig
 Source3:	%{name}.tmpfiles
 Patch0:		%{name}-python.patch
@@ -85,8 +84,8 @@ Patch18:	install-cpp_redis.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
-BuildRequires:	boost-devel >= 1.79
-BuildRequires:	boost-python3-devel >= 1.79
+BuildRequires:	boost-devel >= 1.82
+BuildRequires:	boost-python3-devel >= 1.82
 %{?with_seastar:BuildRequires:	c-ares-devel >= 1.13.0}
 BuildRequires:	cmake >= 3.22.2
 %{?with_seastar:BuildRequires:	cryptopp-devel >= 5.6.5}
@@ -132,7 +131,6 @@ BuildRequires:	liburing-devel
 BuildRequires:	libutf8proc-devel >= 2.2.0
 BuildRequires:	libuuid-devel
 BuildRequires:	libxml2-devel >= 2.0
-%{?with_zbd:BuildRequires:	libzbd-devel}
 BuildRequires:	lmdb-devel
 %{?with_lttng:BuildRequires:	lttng-ust-devel}
 BuildRequires:	lua-devel >= 5.3
@@ -171,6 +169,8 @@ BuildRequires:	thrift-devel
 BuildRequires:	udev-devel
 BuildRequires:	xfsprogs-devel
 %{?with_dpdk:BuildRequires:	xorg-lib-libpciaccess-devel}
+# for internal arrow - if enabled again, could require update for new xsimd:
+# https://github.com/apache/arrow/commit/4b770775c7781f4c2751176cc963034b888716c7.patch
 BuildRequires:	xsimd-devel
 %{?with_seastar:BuildRequires:	yaml-cpp-devel >= 0.5.1}
 %ifarch %{x8664}
@@ -398,10 +398,8 @@ cd build
 	-DHAVE_INTEL_SSE4_2=1 \
 %endif
 	-DALLOCATOR="%{?with_tcmalloc:tcmalloc}%{!?with_tcmalloc:libc}" \
-	-DFIO_INCLUDE_DIR=/usr/include/fio \
 	%{cmake_on_off java JAVA_HOME:PATH} \
 	-DLUA_INCLUDE_DIR=%{_includedir}/lua \
-	-DPYTHON=%{__python3} \
 	-DSPHINX_BUILD=/usr/bin/sphinx-build \
 %if %{with pmem}
 	-DWITH_BLUESTORE_PMEM=ON \
@@ -415,6 +413,11 @@ cd build
 	-DWITH_REENTRANT_STRSIGNAL=ON \
 	-DWITH_SYSTEM_BOOST=ON \
 	-DWITH_SYSTEM_LIBURING=ON \
+	-DWITH_SYSTEM_PMDK=ON \
+	-DWITH_SYSTEM_ROCKSDB=ON \
+	-DWITH_SYSTEM_QAT=ON \
+	-DWITH_SYSTEM_QATZIP=ON \
+	-DWITH_SYSTEM_UTF8PROC=ON \
 	-DWITH_SYSTEM_ZSTD=ON \
 	-DWITH_SYSTEMD=ON \
 	%{cmake_on_off babeltrace WITH_BABELTRACE} \
@@ -434,7 +437,6 @@ cd build
 	%{cmake_on_off angular WITH_SYSTEM_NPM} \
 	%{cmake_on_off system_rocksdb WITH_SYSTEM_ROCKSDB} \
 	%{cmake_on_off tests WITH_TESTS} \
-	%{cmake_on_off zbd WITH_ZBD} \
 	%{cmake_on_off zfs WITH_ZFS}
 
 # some object files have missing dependencies on these, pregenerate to avoid global -j1
