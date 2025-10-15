@@ -53,12 +53,12 @@
 Summary:	User space components of the Ceph file system
 Summary(pl.UTF-8):	Działające w przestrzeni użytkownika elementy systemu plików Ceph
 Name:		ceph
-Version:	19.2.2
+Version:	19.2.3
 Release:	1
 License:	LGPL v2.1 (libraries), GPL v2 (some programs)
 Group:		Base
 Source0:	http://download.ceph.com/tarballs/%{name}-%{version}.tar.gz
-# Source0-md5:	7c76143f9acf7be367559a2376cc646d
+# Source0-md5:	6e7082b1ad93745bb28094ae7d72c77f
 Source1:	%{name}.sysconfig
 Source3:	%{name}.tmpfiles
 Patch0:		%{name}-python.patch
@@ -81,6 +81,7 @@ Patch15:	x32.patch
 Patch16:	ix86.patch
 Patch17:	no-python-deps.patch
 Patch18:	install-cpp_redis.patch
+Patch19:	rgw.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -363,6 +364,7 @@ uruchamiania demonów.
 %patch -P 16 -p1
 %patch -P 17 -p1
 %patch -P 18 -p1
+%patch -P 19 -p1
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
