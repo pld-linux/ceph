@@ -133,6 +133,7 @@ BuildRequires:	libutf8proc-devel >= 2.2.0
 BuildRequires:	libuuid-devel
 BuildRequires:	libxml2-devel >= 2.0
 BuildRequires:	lmdb-devel
+BuildRequires:	libnbd-devel
 %{?with_lttng:BuildRequires:	lttng-ust-devel}
 BuildRequires:	lua-devel >= 5.3
 BuildRequires:	lz4-devel >= 1:1.7.3
