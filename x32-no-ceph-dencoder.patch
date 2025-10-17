@@ -1,0 +1,9 @@
+--- ceph-19.2.3/src/tools/CMakeLists.txt~	2025-07-17 04:58:27.000000000 +0200
++++ ceph-19.2.3/src/tools/CMakeLists.txt	2025-10-17 03:06:11.776660421 +0200
+@@ -153,5 +153,5 @@
+ endif(WITH_RBD)
+ 
+ add_subdirectory(immutable_object_cache)
+-add_subdirectory(ceph-dencoder)
++#add_subdirectory(ceph-dencoder)
+ add_subdirectory(erasure-code)

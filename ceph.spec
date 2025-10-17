@@ -82,6 +82,7 @@ Patch16:	ix86.patch
 Patch17:	no-python-deps.patch
 Patch18:	install-cpp_redis.patch
 Patch19:	rgw.patch
+Patch20:	x32-no-ceph-dencoder.patch
 URL:		https://ceph.io/
 %{?with_qatzip:BuildRequires:	QATzip-devel}
 %{?with_babeltrace:BuildRequires:	babeltrace-devel}
@@ -366,6 +367,9 @@ uruchamiania demonów.
 %patch -P 17 -p1
 %patch -P 18 -p1
 %patch -P 19 -p1
+%ifarch x32
+%patch -P20 -p1
+%endif
 
 %{__sed} -i -e '1s,/usr/bin/env bash,/bin/bash,' \
 	src/{ceph-post-file.in,rbd-replay-many,rbdmap} \
@@ -543,7 +547,9 @@ fi
 %attr(755,root,root) %{_bindir}/ceph-clsinfo
 %attr(755,root,root) %{_bindir}/ceph-conf
 %attr(755,root,root) %{_bindir}/ceph-crash
+%ifnarch x32
 %attr(755,root,root) %{_bindir}/ceph-dencoder
+%endif
 %attr(755,root,root) %{_bindir}/ceph-diff-sorted
 %attr(755,root,root) %{_bindir}/ceph-erasure-code-tool
 %attr(755,root,root) %{_bindir}/ceph-exporter
@@ -612,12 +618,14 @@ fi
 %if %{with qat}
 %attr(755,root,root) %{_libdir}/ceph/crypto/libceph_crypto_qat.so*
 %endif
+%ifnarch x32
 %dir %{_libdir}/ceph/denc
 %attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-cephfs.so
 %attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-common.so
 %attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-osd.so
 %attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-rbd.so
 %attr(755,root,root) %{_libdir}/ceph/denc/denc-mod-rgw.so
+%endif
 %dir %{_libdir}/ceph/erasure-code
 %attr(755,root,root) %{_libdir}/ceph/erasure-code/libec_clay.so*
 %ifarch %{x8664}
