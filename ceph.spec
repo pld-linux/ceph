@@ -108,7 +108,7 @@ BuildRequires:	gperf
 %{?with_seastar:BuildRequires:	hwloc-devel >= 1.11.2}
 %if %{with java}
 %buildrequires_jdk
-BuildRequires:	%{?use_jdk:%{use_jdk}-jre-base-X11}%{!?use_jdk:jre-X11}
+%{?buildrequires_jre_x11}
 %endif
 BuildRequires:	keyutils-devel
 BuildRequires:	leveldb-devel >= 1.23-2
@@ -162,7 +162,7 @@ BuildRequires:	rabbitmq-c-devel
 %{?with_seastar:BuildRequires:	ragel >= 6.10}
 BuildRequires:	re2-devel
 %{?with_system_rocksdb:BuildRequires:	rocksdb-devel >= 5.14}
-BuildRequires:	rpmbuild(macros) >= 2.021
+BuildRequires:	rpmbuild(macros) >= 2.062
 BuildRequires:	sed >= 4.0
 BuildRequires:	snappy-devel
 BuildRequires:	sphinx-pdg >= 4.4.0
